@@ -1,7 +1,7 @@
 // Service worker: makes the app installable and lets it open offline.
 // App files are served from cache and refreshed in the background, so updates you push
 // to GitHub show up the next time the app is opened. Live price/hiscore requests are never cached.
-const CACHE = "osrs-toolkit-v1";
+const CACHE = "osrs-toolkit-v2";
 const SHELL = [
   "./", "index.html", "style.css", "app.js", "logic.js", "data.js", "manifest.webmanifest",
   "icons/icon.svg", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png", "icons/favicon-32.png",

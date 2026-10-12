@@ -1,20 +1,25 @@
 /* OSRS Toolkit - mobile-first styles. Dark by default, light when the device prefers it. */
 :root {
-  --bg: #16130e;
-  --surface: #211d16;
-  --surface-2: #2b261d;
-  --line: #3a3326;
-  --ink: #efe6d2;
-  --muted: #a99d84;
-  --accent: #e2b34a;
-  --accent-ink: #1b1608;
-  --ready: #5cc27a;
-  --ready-bg: rgba(92, 194, 122, 0.14);
-  --close: #e6b24a;
-  --close-bg: rgba(230, 178, 74, 0.14);
-  --locked: #8a8070;
-  --bad: #e2725b;
-  --done: #7fbf8e;
+  /* Palette: #0C5443 green · #941735 crimson · #462B3F plum · #C58BA4 mauve · #FD8D43 orange */
+  --bg: #1c1119;            /* deep plum */
+  --surface: #2a1a25;
+  --surface-2: #3a2433;
+  --line: #533748;
+  --ink: #f7ecf1;
+  --muted: #c58ba4;         /* mauve */
+  --accent: #fd8d43;        /* orange */
+  --accent-ink: #2a1a25;
+  --ready: #4fc49d;         /* green, lifted so it reads on plum */
+  --ready-bg: #0c5443;      /* green */
+  --ready-badge: #9fe3c8;
+  --close: #fd8d43;         /* orange */
+  --close-bg: rgba(253, 141, 67, 0.16);
+  --locked: #9a7a8d;
+  --bad: #f0607e;           /* crimson, lifted */
+  --danger: #941735;        /* crimson */
+  --done: #4fc49d;
+  --done-fill: #0c5443;
+  --header: #462b3f;        /* plum */
   --radius: 14px;
   --nav-h: 64px;
   --safe-b: env(safe-area-inset-bottom, 0px);
@@ -22,21 +27,25 @@
 }
 @media (prefers-color-scheme: light) {
   :root {
-    --bg: #f4eedf;
-    --surface: #fffcf4;
-    --surface-2: #f1e9d6;
-    --line: #e0d4b8;
-    --ink: #2a2318;
-    --muted: #7a6d55;
-    --accent: #a9741b;
-    --accent-ink: #fffaf0;
-    --ready: #2e8a4a;
-    --ready-bg: rgba(46, 138, 74, 0.10);
-    --close: #a66d00;
-    --close-bg: rgba(200, 140, 20, 0.12);
-    --locked: #9a8f7a;
-    --bad: #b8432c;
-    --done: #3d8a52;
+    --bg: #f8eff3;
+    --surface: #fffafc;
+    --surface-2: #f1e2ea;
+    --line: #e3c8d5;
+    --ink: #2a1a25;
+    --muted: #7d5a6e;
+    --accent: #941735;      /* crimson */
+    --accent-ink: #ffffff;
+    --ready: #0c5443;       /* green */
+    --ready-bg: #dcebe5;
+    --ready-badge: #0c5443;
+    --close: #b0501a;       /* orange, darkened for text */
+    --close-bg: rgba(253, 141, 67, 0.20);
+    --locked: #806676;
+    --bad: #941735;
+    --danger: #941735;
+    --done: #0c5443;
+    --done-fill: #0c5443;
+    --header: #462b3f;
     color-scheme: light;
   }
 }
@@ -63,17 +72,17 @@ h2 { font-size: 1.05rem; margin: 18px 0 4px; letter-spacing: 0.01em; }
   position: sticky; top: 0; z-index: 20;
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
   padding: calc(10px + env(safe-area-inset-top, 0px)) 16px 10px;
-  background: color-mix(in srgb, var(--bg) 92%, transparent);
-  backdrop-filter: blur(8px);
-  border-bottom: 1px solid var(--line);
+  background: var(--header);
+  color: #f7ecf1;
+  border-bottom: 1px solid color-mix(in srgb, var(--header) 70%, #000);
 }
 .brand { display: flex; align-items: center; gap: 8px; font-weight: 700; white-space: nowrap; }
 .pills { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
 .pill {
   font-size: 0.78rem; padding: 3px 9px; border-radius: 999px;
-  background: var(--surface-2); border: 1px solid var(--line); white-space: nowrap;
+  background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.14); white-space: nowrap;
 }
-.pill b { color: var(--accent); }
+.pill b { color: #fd8d43; }
 
 /* ---------- bottom tab bar (top bar on wide screens) */
 .tabs {
@@ -113,7 +122,7 @@ input:focus, select:focus { border-color: var(--accent); }
   background: var(--surface-2); cursor: pointer; white-space: nowrap; font-size: 0.9rem;
 }
 .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
-.btn.danger { color: var(--bad); }
+.btn.danger { background: var(--danger); color: #fff; border-color: var(--danger); }
 .btn:disabled { opacity: 0.6; cursor: progress; }
 .field { display: block; font-size: 0.82rem; color: var(--muted); margin: 10px 0; }
 .field input, .field select { margin-top: 4px; color: var(--ink); }
@@ -160,7 +169,7 @@ details.more summary { cursor: pointer; color: var(--muted); font-size: 0.88rem;
   padding: 2px 7px; border-radius: 6px; background: var(--surface-2); color: var(--muted);
   border: 1px solid var(--line); white-space: nowrap; vertical-align: 1px;
 }
-.badge.ready { color: var(--ready); background: var(--ready-bg); border-color: transparent; }
+.badge.ready { color: var(--ready-badge); background: var(--ready-bg); border-color: transparent; }
 .badge.close { color: var(--close); background: var(--close-bg); border-color: transparent; }
 .badge.done { color: var(--done); }
 .badge.kind { min-width: 52px; text-align: center; }
@@ -182,7 +191,7 @@ details.more summary { cursor: pointer; color: var(--muted); font-size: 0.88rem;
 .tick span {
   width: 22px; height: 22px; border-radius: 6px; border: 2px solid var(--locked); display: grid; place-items: center;
 }
-.tick[aria-pressed="true"] span { background: var(--done); border-color: var(--done); }
+.tick[aria-pressed="true"] span { background: var(--done-fill); border-color: var(--done); }
 .tick[aria-pressed="true"] span::after {
   content: ""; width: 6px; height: 11px; border: solid #fff; border-width: 0 2.5px 2.5px 0; transform: rotate(45deg) translate(-1px, -1px);
 }
@@ -220,6 +229,8 @@ details.more summary { cursor: pointer; color: var(--muted); font-size: 0.88rem;
 .skill .lines span { color: var(--muted); }
 .skill.blocking { border-color: color-mix(in srgb, var(--close) 55%, var(--line)); }
 .skill.maxed .skill-name { color: var(--accent); }
+.tabs button[aria-current="page"] svg { stroke: var(--accent); }
+.steps .badge.kind { background: var(--header); color: #f7ecf1; border-color: transparent; }
 
 /* ---------- alch */
 .alch-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 0 10px; }
