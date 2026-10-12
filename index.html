@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>OSRS Toolkit</title>
+  <meta name="description" content="Quest, diary, skill, PvM and high alch helper for Old School RuneScape.">
+  <meta name="theme-color" content="#16130e" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#f4eedf" media="(prefers-color-scheme: light)">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="OSRS Toolkit">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <img src="icons/icon.svg" alt="" width="28" height="28">
+      <span>OSRS Toolkit</span>
+    </div>
+    <div class="pills" id="pills" aria-live="polite"></div>
+  </header>
+
+  <nav class="tabs" id="tabs" aria-label="Sections">
+    <button data-tab="next"><svg viewBox="0 0 24 24"><path d="M4 12h12M12 6l6 6-6 6"/></svg><span>Next</span></button>
+    <button data-tab="stats"><svg viewBox="0 0 24 24"><path d="M5 19V11M12 19V5M19 19v-6"/></svg><span>Skills</span></button>
+    <button data-tab="quests"><svg viewBox="0 0 24 24"><path d="M7 4h10v16l-5-3-5 3z"/></svg><span>Quests</span></button>
+    <button data-tab="diaries"><svg viewBox="0 0 24 24"><path d="M5 5h14v14H5zM9 12l2 2 4-4"/></svg><span>Diaries</span></button>
+    <button data-tab="pvm"><svg viewBox="0 0 24 24"><path d="M5 19L19 5M14 5h5v5M7 13l4 4M4 20l3-3"/></svg><span>PvM</span></button>
+    <button data-tab="alch"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><path d="M12 8v8M9.5 10.5h4a1.5 1.5 0 010 3h-3a1.5 1.5 0 000 3h4"/></svg><span>Alch</span></button>
+  </nav>
+
+  <main id="main">
+    <!-- NEXT -->
+    <section class="view" id="view-next">
+      <div class="tiles" id="tiles"></div>
+      <h2>Next steps</h2>
+      <p class="hint">Ranked from your levels, quest log and diaries. Tap one to open its wiki page.</p>
+      <ol class="cards steps" id="steps"></ol>
+      <p class="hint" id="first-run" hidden>
+        Start on the <b>Skills</b> tab: enter your levels (or sync them), then tick the quests you've done on <b>Quests</b>.
+      </p>
+    </section>
+
+    <!-- SKILLS / STATS -->
+    <section class="view" id="view-stats">
+      <div class="card sync">
+        <h2>Your account</h2>
+        <div class="row">
+          <input id="rsn" type="text" placeholder="RuneScape name" autocomplete="off" autocapitalize="off" spellcheck="false">
+          <button class="btn primary" id="sync-btn">Sync</button>
+        </div>
+        <p class="hint" id="sync-status">Type your levels below, or press Sync to pull them from the hiscores / WikiSync.</p>
+        <details class="more">
+          <summary>Sync & backup settings</summary>
+          <label class="check"><input type="checkbox" id="auto-sync"> Sync automatically when the app opens</label>
+          <label class="field">Live-data proxy URL <span class="muted">(optional, see README)</span>
+            <input id="proxy" type="url" placeholder="https://your-worker.workers.dev" autocomplete="off" spellcheck="false">
+          </label>
+          <div class="row wrap">
+            <button class="btn" id="export-btn">Export backup</button>
+            <label class="btn">Import backup / desktop config<input type="file" id="import-file" accept=".json,application/json" hidden></label>
+            <button class="btn danger" id="reset-btn">Reset everything</button>
+          </div>
+          <p class="hint">Your data is saved in this browser only. Export a backup to move it to another device —
+            the importer also reads <code>osrs_helper_config.json</code> from the desktop app.</p>
+        </details>
+      </div>
+      <h2>Skills → 99</h2>
+      <p class="hint">Tap a skill name for its wiki training guide.</p>
+      <div class="skills" id="skills"></div>
+    </section>
+
+    <!-- QUESTS -->
+    <section class="view" id="view-quests">
+      <div class="toolbar">
+        <input type="search" id="quest-search" placeholder="Search quests" autocomplete="off">
+        <div class="chips" id="quest-chips"></div>
+        <p class="hint" id="quest-count"></p>
+      </div>
+      <ul class="list" id="quest-list"></ul>
+    </section>
+
+    <!-- DIARIES -->
+    <section class="view" id="view-diaries">
+      <div class="toolbar">
+        <div class="tier-tiles" id="diary-summary"></div>
+        <div class="chips" id="diary-chips"></div>
+        <p class="hint">Levels are the highest any task in the tier needs — many can be boosted.</p>
+      </div>
+      <ul class="list" id="diary-list"></ul>
+    </section>
+
+    <!-- PVM -->
+    <section class="view" id="view-pvm">
+      <div class="toolbar">
+        <input type="search" id="pvm-search" placeholder="Search bosses & monsters" autocomplete="off">
+        <div class="chips" id="pvm-chips"></div>
+        <p class="hint" id="pvm-count"></p>
+      </div>
+      <ul class="list" id="pvm-list"></ul>
+    </section>
+
+    <!-- ALCH -->
+    <section class="view" id="view-alch">
+      <div class="toolbar">
+        <input type="search" id="alch-search" placeholder="Search items" autocomplete="off">
+        <div class="alch-controls">
+          <label class="field small">Min profit<input id="alch-min-profit" type="number" inputmode="numeric" value="1"></label>
+          <label class="field small">Min 1h volume<input id="alch-min-vol" type="number" inputmode="numeric" value="0"></label>
+          <label class="field small">Buy at
+            <select id="alch-mode"><option value="instant">Instant buy</option><option value="offer">Offer (low)</option></select>
+          </label>
+          <label class="field small">Sort by
+            <select id="alch-sort">
+              <option value="profit">Profit / cast</option>
+              <option value="hourly">Max GP / hour</option>
+              <option value="limitProfit">Profit / buy limit</option>
+              <option value="roi">ROI %</option>
+              <option value="volume">1h volume</option>
+            </select>
+          </label>
+          <label class="check"><input type="checkbox" id="alch-members" checked> Members items</label>
+        </div>
+        <p class="hint" id="alch-status">Loading prices…</p>
+      </div>
+      <ul class="list alch" id="alch-list"></ul>
+      <p class="hint">Profit = high alch value − GE price − one nature rune (assumes a fire staff).
+        Prices: OSRS Wiki real-time prices, refreshed every minute. Tap an item for its price history.</p>
+    </section>
+  </main>
+
+  <div class="toast" id="toast" role="status" hidden></div>
+
+  <script src="data.js"></script>
+  <script src="logic.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

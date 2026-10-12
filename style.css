@@ -1,0 +1,264 @@
+/* OSRS Toolkit - mobile-first styles. Dark by default, light when the device prefers it. */
+:root {
+  --bg: #16130e;
+  --surface: #211d16;
+  --surface-2: #2b261d;
+  --line: #3a3326;
+  --ink: #efe6d2;
+  --muted: #a99d84;
+  --accent: #e2b34a;
+  --accent-ink: #1b1608;
+  --ready: #5cc27a;
+  --ready-bg: rgba(92, 194, 122, 0.14);
+  --close: #e6b24a;
+  --close-bg: rgba(230, 178, 74, 0.14);
+  --locked: #8a8070;
+  --bad: #e2725b;
+  --done: #7fbf8e;
+  --radius: 14px;
+  --nav-h: 64px;
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #f4eedf;
+    --surface: #fffcf4;
+    --surface-2: #f1e9d6;
+    --line: #e0d4b8;
+    --ink: #2a2318;
+    --muted: #7a6d55;
+    --accent: #a9741b;
+    --accent-ink: #fffaf0;
+    --ready: #2e8a4a;
+    --ready-bg: rgba(46, 138, 74, 0.10);
+    --close: #a66d00;
+    --close-bg: rgba(200, 140, 20, 0.12);
+    --locked: #9a8f7a;
+    --bad: #b8432c;
+    --done: #3d8a52;
+    color-scheme: light;
+  }
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  padding-bottom: calc(var(--nav-h) + var(--safe-b) + 12px);
+  overflow-x: hidden;
+}
+button, input, select { font: inherit; color: inherit; }
+a { color: var(--accent); }
+code { font-size: 0.92em; background: var(--surface-2); padding: 1px 5px; border-radius: 6px; }
+h2 { font-size: 1.05rem; margin: 18px 0 4px; letter-spacing: 0.01em; }
+.hint { color: var(--muted); font-size: 0.85rem; margin: 4px 0 10px; }
+.muted { color: var(--muted); font-weight: normal; }
+
+/* ---------- top bar */
+.topbar {
+  position: sticky; top: 0; z-index: 20;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: calc(10px + env(safe-area-inset-top, 0px)) 16px 10px;
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--line);
+}
+.brand { display: flex; align-items: center; gap: 8px; font-weight: 700; white-space: nowrap; }
+.pills { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.pill {
+  font-size: 0.78rem; padding: 3px 9px; border-radius: 999px;
+  background: var(--surface-2); border: 1px solid var(--line); white-space: nowrap;
+}
+.pill b { color: var(--accent); }
+
+/* ---------- bottom tab bar (top bar on wide screens) */
+.tabs {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
+  display: grid; grid-template-columns: repeat(6, 1fr);
+  height: calc(var(--nav-h) + var(--safe-b)); padding-bottom: var(--safe-b);
+  background: var(--surface); border-top: 1px solid var(--line);
+}
+.tabs button {
+  border: 0; background: none; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 3px; font-size: 0.72rem; color: var(--muted); cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.tabs svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.tabs button[aria-current="page"] { color: var(--accent); font-weight: 600; }
+
+main { max-width: 1100px; margin: 0 auto; padding: 4px 16px 0; }
+.view { display: none; }
+.view.active { display: block; }
+
+/* ---------- generic bits */
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 14px; margin: 12px 0;
+}
+.card h2 { margin-top: 0; }
+.row { display: flex; gap: 8px; align-items: center; }
+.row.wrap { flex-wrap: wrap; }
+input[type="text"], input[type="search"], input[type="url"], input[type="number"], select {
+  width: 100%; min-width: 0; padding: 10px 12px; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--surface-2); outline: none;
+}
+input:focus, select:focus { border-color: var(--accent); }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 10px 14px; border-radius: 10px; border: 1px solid var(--line);
+  background: var(--surface-2); cursor: pointer; white-space: nowrap; font-size: 0.9rem;
+}
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+.btn.danger { color: var(--bad); }
+.btn:disabled { opacity: 0.6; cursor: progress; }
+.field { display: block; font-size: 0.82rem; color: var(--muted); margin: 10px 0; }
+.field input, .field select { margin-top: 4px; color: var(--ink); }
+.check { display: flex; align-items: center; gap: 8px; margin: 10px 0; font-size: 0.9rem; }
+.check input { width: 18px; height: 18px; accent-color: var(--accent); }
+details.more { margin-top: 6px; }
+details.more summary { cursor: pointer; color: var(--muted); font-size: 0.88rem; padding: 4px 0; }
+
+/* ---------- toolbar + chips */
+.toolbar { position: sticky; top: 53px; z-index: 10; background: var(--bg); padding: 10px 0 2px; }
+.chips { display: flex; gap: 6px; overflow-x: auto; padding: 8px 0 2px; scrollbar-width: none; }
+.chips::-webkit-scrollbar { display: none; }
+.chip {
+  flex: none; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line);
+  background: var(--surface); font-size: 0.84rem; cursor: pointer; white-space: nowrap;
+}
+.chip[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+.chip .n { opacity: 0.75; margin-left: 4px; font-size: 0.78rem; }
+
+/* ---------- tiles */
+.tiles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 12px; }
+.tile { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; }
+.tile .big { font-size: 1.35rem; font-weight: 700; }
+.tile .big small { font-size: 0.8rem; color: var(--muted); font-weight: 500; }
+.tile .lbl { color: var(--muted); font-size: 0.8rem; }
+.bar { height: 5px; background: var(--surface-2); border-radius: 99px; overflow: hidden; margin-top: 8px; }
+.bar > i { display: block; height: 100%; background: var(--accent); border-radius: 99px; }
+.tier-tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.tier-tiles .tile { padding: 8px 10px; }
+.tier-tiles .big { font-size: 1.05rem; }
+
+/* ---------- next steps */
+.cards { list-style: none; padding: 0; margin: 0; }
+.steps li a {
+  display: flex; gap: 12px; align-items: flex-start; text-decoration: none; color: inherit;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 12px 14px; margin-bottom: 8px;
+}
+.steps .txt { flex: 1; }
+
+/* ---------- badges */
+.badge {
+  display: inline-block; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase;
+  padding: 2px 7px; border-radius: 6px; background: var(--surface-2); color: var(--muted);
+  border: 1px solid var(--line); white-space: nowrap; vertical-align: 1px;
+}
+.badge.ready { color: var(--ready); background: var(--ready-bg); border-color: transparent; }
+.badge.close { color: var(--close); background: var(--close-bg); border-color: transparent; }
+.badge.done { color: var(--done); }
+.badge.kind { min-width: 52px; text-align: center; }
+
+/* ---------- lists (quests, diaries, pvm, alch) */
+.list { list-style: none; padding: 0; margin: 6px 0 0; }
+.item {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+  margin-bottom: 6px; overflow: hidden;
+}
+.item.is-ready { border-left: 3px solid var(--ready); }
+.item.is-close { border-left: 3px solid var(--close); }
+.item.is-done .title { color: var(--done); }
+.item.is-locked .title { color: var(--muted); }
+.item-head { display: flex; align-items: center; gap: 4px; min-height: 52px; }
+.tick {
+  flex: none; width: 48px; height: 52px; border: 0; background: none; cursor: pointer; display: grid; place-items: center;
+}
+.tick span {
+  width: 22px; height: 22px; border-radius: 6px; border: 2px solid var(--locked); display: grid; place-items: center;
+}
+.tick[aria-pressed="true"] span { background: var(--done); border-color: var(--done); }
+.tick[aria-pressed="true"] span::after {
+  content: ""; width: 6px; height: 11px; border: solid #fff; border-width: 0 2.5px 2.5px 0; transform: rotate(45deg) translate(-1px, -1px);
+}
+.expand {
+  flex: 1; min-width: 0; border: 0; background: none; text-align: left; cursor: pointer;
+  padding: 8px 12px 8px 4px; display: flex; flex-direction: column; gap: 2px;
+}
+.item:not(:has(.tick)) .expand { padding-left: 14px; }
+.title { font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
+.sub { font-size: 0.8rem; color: var(--muted); display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.body { padding: 0 14px 12px 52px; font-size: 0.88rem; display: none; }
+.item:not(:has(.tick)) .body { padding-left: 14px; }
+.item.open .body { display: block; }
+.body dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; }
+.body dt { color: var(--muted); }
+.body dd { margin: 0; }
+.req { display: inline; }
+.req .miss { color: var(--bad); font-weight: 600; }
+.req .ok { color: var(--done); }
+.wiki { display: inline-block; margin-top: 10px; font-weight: 600; text-decoration: none; }
+
+/* ---------- skills */
+.skills { display: grid; grid-template-columns: 1fr; gap: 8px; }
+.skill { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px; }
+.skill-top { display: flex; align-items: center; gap: 8px; }
+.skill-name { flex: 1; font-weight: 700; color: inherit; text-decoration: none; }
+.stepper { display: flex; align-items: center; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.stepper button { width: 38px; height: 38px; border: 0; background: var(--surface-2); font-size: 1.15rem; cursor: pointer; }
+.stepper input {
+  width: 48px; text-align: center; border: 0; border-radius: 0; padding: 8px 2px; background: transparent;
+  font-weight: 700; -moz-appearance: textfield;
+}
+.stepper input::-webkit-outer-spin-button, .stepper input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.skill .lines { font-size: 0.82rem; margin-top: 6px; display: grid; gap: 2px; }
+.skill .lines span { color: var(--muted); }
+.skill.blocking { border-color: color-mix(in srgb, var(--close) 55%, var(--line)); }
+.skill.maxed .skill-name { color: var(--accent); }
+
+/* ---------- alch */
+.alch-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 0 10px; }
+.alch-controls .field { margin: 6px 0; }
+.alch-controls .check { grid-column: 1 / -1; margin: 4px 0; }
+.alch .item a.expand { text-decoration: none; color: inherit; }
+.alch .profit { font-weight: 800; font-size: 1.05rem; color: var(--ready); white-space: nowrap; padding-right: 14px; }
+.alch .profit.neg { color: var(--bad); }
+.alch .nums { display: grid; grid-template-columns: repeat(3, auto); gap: 2px 14px; font-size: 0.78rem; color: var(--muted); padding: 0 14px 10px; }
+.alch .nums b { color: var(--ink); font-weight: 600; }
+.alch .rank { flex: none; width: 34px; text-align: right; color: var(--muted); font-size: 0.8rem; padding-left: 6px; }
+
+/* ---------- toast */
+.toast {
+  position: fixed; left: 50%; transform: translateX(-50%);
+  bottom: calc(var(--nav-h) + var(--safe-b) + 14px); z-index: 50;
+  background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-size: 0.88rem;
+  max-width: calc(100vw - 32px); box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+}
+
+/* ---------- wide screens: tabs move to the top */
+@media (min-width: 900px) {
+  body { padding-bottom: 24px; }
+  .tabs {
+    position: sticky; top: 53px; bottom: auto; height: auto; padding: 0 16px;
+    display: flex; justify-content: center; gap: 4px; border-top: 0; border-bottom: 1px solid var(--line);
+    background: var(--bg);
+  }
+  .tabs button { flex-direction: row; gap: 8px; font-size: 0.92rem; padding: 12px 16px; border-bottom: 2px solid transparent; }
+  .tabs button[aria-current="page"] { border-bottom-color: var(--accent); }
+  .tabs svg { width: 18px; height: 18px; }
+  .toolbar { top: 103px; }
+  .tiles { grid-template-columns: repeat(4, 1fr); }
+  .skills { grid-template-columns: repeat(3, 1fr); }
+  .alch-controls { grid-template-columns: repeat(4, 1fr) auto; align-items: end; }
+  .alch-controls .check { grid-column: auto; margin-bottom: 14px; }
+  .toast { bottom: 24px; }
+}
+@media (min-width: 600px) and (max-width: 899px) {
+  .skills { grid-template-columns: repeat(2, 1fr); }
+  .tiles { grid-template-columns: repeat(4, 1fr); }
+}
