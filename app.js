@@ -14,6 +14,7 @@
     v: 1, levels: {}, xp: {}, done: [], diaryDone: [], kc: {},
     rsn: "", proxy: "", autoSync: false, lastSync: null,
     ui: { tab: "next", quests: "notdone", diaries: "notdone", pvm: "all" },
+    timers: {}, timerSeed: {},
     alch: { minProfit: 1, minVol: 0, mode: "instant", sort: "profit", members: true },
   });
   let state = load();
@@ -88,7 +89,7 @@
   }
 
   function statusBadge(kind) {
-    const cls = { Ready: "ready", READY: "ready", Close: "close", Almost: "close", Check: "close", Done: "done" }[kind] || "";
+    const cls = { Ready: "ready", READY: "ready", Grown: "ready", Close: "close", Almost: "close", Check: "close", Done: "done" }[kind] || "";
     return `<span class="badge ${cls}">${esc(kind)}</span>`;
   }
 
@@ -166,6 +167,7 @@
       `<span class="txt">${esc(s.text)}</span></a></li>`).join("");
     const fresh = !Object.keys(state.levels).length && !state.done.length;
     $("first-run").hidden = !fresh;
+    renderTimerPanel($("next-timers"), true);
   }
 
   // ================================================================ SKILLS
@@ -394,6 +396,87 @@
   const TREE_WIKI = { tree: "Tree patch", fruit: "Fruit tree patch", hardwood: "Hardwood tree patch",
                       calquat: "Calquat tree patch", spirit: "Spirit tree patch", crystal: "Crystal tree patch",
                       celastrus: "Celastrus patch", redwood: "Redwood tree patch" };
+  // ---------------------------------------------------------------- tree timers
+  // Timers are manual: the game doesn't share patch states with websites. Stored in state.timers:
+  // { "tree|Lumbridge": { type: "tree", patch: "Lumbridge", seed: "Magic", start: ms, end: ms, notified: bool } }
+  const TYPE = Object.fromEntries(G.TREE_TYPES.map((t) => [t.id, t]));
+  function growMinutes(text) {
+    if (!text) return null;
+    const part = (re) => { const m = re.exec(text); return m ? +m[1] : 0; };
+    const mins = part(/(\d+)d/) * 1440 + part(/(\d+)h/) * 60 + part(/(\d+)m/);
+    return mins || null;
+  }
+  function duration(ms) {
+    const m = Math.max(0, Math.round(ms / 60000));
+    if (m < 1) return "under a minute";
+    const d = Math.floor(m / 1440), h = Math.floor((m % 1440) / 60), mm = m % 60;
+    return d ? `${d}d ${h}h` : h ? `${h}h ${mm}m` : `${mm}m`;
+  }
+  function clockAt(ms) {
+    const d = new Date(ms), now = new Date();
+    const time = d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    if (d.toDateString() === now.toDateString()) return time;
+    const tomorrow = new Date(now); tomorrow.setDate(now.getDate() + 1);
+    if (d.toDateString() === tomorrow.toDateString()) return `tomorrow ${time}`;
+    return `${d.toLocaleDateString([], { weekday: "short" })} ${time}`;
+  }
+  const timerList = () => Object.entries(state.timers || {}).map(([key, t]) => Object.assign({ key }, t))
+    .sort((x, y) => x.end - y.end);
+  const isGrown = (t) => Date.now() >= t.end;
+
+  function startTimer(key, typeId, seedName) {
+    const seed = TYPE[typeId].seeds.find((x) => x[0] === seedName);
+    const mins = seed && growMinutes(seed[4]);
+    if (!mins) { toast("No growth time known for that seed."); return; }
+    const now = Date.now();
+    state.timers[key] = { type: typeId, patch: key.split("|")[1], seed: seedName, start: now, end: now + mins * 60000, notified: false };
+  }
+
+  function seedOptions(t, farm) {
+    const best = t.seeds.filter((x) => farm >= x[1]).pop();
+    const chosen = state.timerSeed[t.id] || (best ? best[0] : t.seeds[0][0]);
+    return t.seeds.map(([name, lvl, , , grow]) =>
+      `<option value="${esc(name)}" ${name === chosen ? "selected" : ""}>${esc(name)} — ${grow || "?"}${farm < lvl ? ` (needs ${lvl})` : ""}</option>`).join("");
+  }
+
+  function countdownHtml(t) {
+    return isGrown(t)
+      ? `<span class="countdown" data-end="${t.end}">Fully grown</span>`
+      : `<span class="countdown" data-end="${t.end}">ready in ${duration(t.end - Date.now())}</span>`;
+  }
+  function barHtml(t) {
+    const pct = Math.min(100, Math.max(0, (100 * (Date.now() - t.start)) / (t.end - t.start)));
+    return `<div class="bar tbar"><i data-start="${t.start}" data-end="${t.end}" style="width:${pct.toFixed(1)}%"></i></div>`;
+  }
+
+  // Panel listing every running timer (Trees tab, and a compact version on Next)
+  function renderTimerPanel(el, compact) {
+    const list = timerList();
+    if (!list.length) {
+      el.innerHTML = compact ? "" : `<div class="card timers empty"><b>Tree timers</b>
+        <p class="hint">Plant a tree, open its patch below and tap <b>Start timer</b> — or use <b>Start all</b> on a patch type after a tree run.</p></div>`;
+      return;
+    }
+    const grown = list.filter(isGrown).length;
+    const rows = (compact ? list.slice(0, 4) : list).map((t) => {
+      const typeName = TYPE[t.type] ? TYPE[t.type].name.replace(/ patch(es)?$/, "") : t.type;
+      return `<li class="timer ${isGrown(t) ? "grown" : ""}" data-key="${esc(t.key)}">
+          <div class="trow"><span class="tname"><b>${esc(t.seed)}</b> · ${esc(t.patch)} <span class="muted">(${esc(typeName)})</span></span>
+            <span class="twhen">${countdownHtml(t)}${isGrown(t) ? "" : `<span class="muted"> · ${clockAt(t.end)}</span>`}</span>
+            ${compact ? "" : `<button class="tclear" data-act="clear" aria-label="Clear timer">✕</button>`}</div>
+          ${barHtml(t)}</li>`;
+    }).join("");
+    const notifyBtn = !compact && "Notification" in window && Notification.permission === "default"
+      ? `<button class="btn small" data-act="notify">🔔 Notify me when grown</button>` : "";
+    el.innerHTML = `<div class="card timers">
+        <div class="thead"><b>Tree timers</b><span class="muted">${list.length} running${grown ? ` · <span class="grown-n">${grown} ready to check</span>` : ""}</span>
+          ${compact ? `<button class="btn small" data-act="goto-trees">Open</button>` :
+            `${notifyBtn}${grown ? `<button class="btn small" data-act="clear-grown">Clear grown</button>` : ""}`}</div>
+        <ul class="timer-list">${rows}</ul>
+        ${compact && list.length > 4 ? `<p class="hint">+${list.length - 4} more on the Trees tab</p>` : ""}
+      </div>`;
+  }
+
   function renderTrees() {
     const a = account, f = state.ui.trees || "all";
     const farm = a.levels.Farming;
@@ -402,27 +485,42 @@
     for (const t of types) counts[t.id] = t.patches.length;
     chips($("tree-chips"), [["all", "All"]].concat(types.map((t) => [t.id, t.name.replace(/ patch(es)?$/, "")])), f, counts,
       (k) => { state.ui.trees = k; save(); renderTrees(); });
+    renderTimerPanel($("tree-timers"), false);
     let usable = 0;
     const html = types.filter((t) => f === "all" || t.id === f).map((t) => {
-      const best = t.seeds.filter((s) => farm >= s[1]).pop();
+      const best = t.seeds.filter((x) => farm >= x[1]).pop();
       const seeds = t.seeds.map(([name, lvl, px, cx, grow, pay]) => `
         <tr class="${farm >= lvl ? "" : "locked"}"><td><b>${esc(name)}</b></td><td>${lvl}</td>
           <td>${px === null ? "—" : fmt(px) + " / " + fmt(cx)}</td><td>${grow ? esc(grow) : "—"}</td><td>${esc(pay)}</td></tr>`).join("");
+      let reachable = 0;
       const patches = t.patches.map((p) => {
+        const key = t.id + "|" + p.name;
         const [missing, notes] = p.req ? a.check(p.req) : [[], []];
         const ok = missing.length === 0;
-        if (ok) usable++;
+        if (ok) { usable++; reachable++; }
+        const timer = state.timers[key];
         const label = !ok ? "Locked" : notes.length ? "Check" : "Ready";
-        const sub = `${statusBadge(label)}<span>${esc(p.where)}</span>` +
-          (!ok ? `<span>· needs ${esc(missing.join(", "))}</span>` : "") +
-          (notes.length ? `<span>· ${esc(notes.join(", "))}</span>` : "");
-        const body = `<dl>
+        const timerBadge = timer ? (isGrown(timer) ? statusBadge("Grown") : `<span class="badge growing">Growing</span>`) : statusBadge(label);
+        const sub = `${timerBadge}` +
+          (timer ? `<span>${esc(timer.seed)} · ${countdownHtml(timer)}</span>` : `<span>${esc(p.where)}</span>`) +
+          (!timer && !ok ? `<span>· needs ${esc(missing.join(", "))}</span>` : "") +
+          (!timer && notes.length ? `<span>· ${esc(notes.join(", "))}</span>` : "");
+        const timerCtl = `<div class="timer-ctl" data-key="${esc(key)}" data-type="${t.id}">
+            ${timer ? `<div class="tstate">${esc(timer.seed)} planted ${clockAt(timer.start)} · ${countdownHtml(timer)}${isGrown(timer) ? "" : ` (${clockAt(timer.end)})`}</div>${barHtml(timer)}` : ""}
+            <div class="row wrap">
+              <select class="seed-pick" aria-label="Seed planted">${seedOptions(t, farm)}</select>
+              <button class="btn primary" data-act="start">${timer ? "Replant / restart" : "Start timer"}</button>
+              ${timer ? `<button class="btn" data-act="clear">Clear</button>` : ""}
+            </div></div>`;
+        const body = `${timerCtl}<dl>
+            <dt>Location</dt><dd>${esc(p.where)}</dd>
             <dt>Gardener</dt><dd>${esc(p.gardener)}</dd>
             <dt>Get there</dt><dd>${esc(p.tele)}</dd>
             <dt>Requires</dt><dd>${p.req ? reqList(p.req) : "None"}</dd>
             ${p.note ? `<dt>Note</dt><dd>${esc(p.note)}</dd>` : ""}
           </dl><a class="wiki" href="${wikiUrl(TREE_WIKI[t.id])}" target="_blank" rel="noopener">Open wiki page ↗</a>`;
-        return itemHtml({ id: t.id + "|" + p.name, kind: "tree", cls: label === "Ready" ? "is-ready" : label === "Check" ? "is-close" : "is-locked", title: p.name, sub, body });
+        const cls = timer ? (isGrown(timer) ? "is-ready" : "is-close") : label === "Ready" ? "is-ready" : label === "Check" ? "is-close" : "is-locked";
+        return itemHtml({ id: key, kind: "tree", cls, title: p.name, sub, body });
       }).join("");
       return `<section class="group">
           <h2>${esc(t.name)} <span class="muted">· ${t.patches.length} patch${t.patches.length === 1 ? "" : "es"}</span></h2>
@@ -430,12 +528,106 @@
           <div class="table-wrap"><table class="seeds">
             <thead><tr><th>Seed</th><th>Lvl</th><th>XP plant / check</th><th>Grows</th><th>Protect with</th></tr></thead>
             <tbody>${seeds}</tbody></table></div>
+          ${reachable > 1 ? `<div class="timer-ctl group-ctl" data-type="${t.id}"><span class="muted">Just did a run?</span>
+              <select class="seed-pick" aria-label="Seed planted">${seedOptions(t, farm)}</select>
+              <button class="btn" data-act="start-all">Start all ${reachable} reachable</button></div>` : ""}
           <ul class="list">${patches}</ul>
+          <p class="hint">Timers are estimates: the game grows ${esc(t.name.toLowerCase())} in ${t.cycle}-minute steps, so it can finish up to ${t.cycle} minutes sooner or later.</p>
         </section>`;
     }).join("");
     $("tree-groups").innerHTML = html;
     $("tree-status").innerHTML = `Your Farming: <b>${farm}</b> · you can reach ${usable} of the patches shown`;
+    updateTreeDot();
   }
+
+  function reachablePatches(typeId) {
+    return TYPE[typeId].patches.filter((p) => !p.req || account.check(p.req)[0].length === 0);
+  }
+
+  function onTimerAction(e) {
+    const b = e.target.closest("[data-act]");
+    if (!b) return;
+    const act = b.dataset.act;
+    if (act === "goto-trees") { showTab("trees", true); return; }
+    if (act === "notify") {
+      Notification.requestPermission().then((p) => { toast(p === "granted" ? "You'll get a notification when a tree is grown." : "Notifications are off."); renderTrees(); });
+      return;
+    }
+    if (act === "clear-grown") {
+      for (const t of timerList()) if (isGrown(t)) delete state.timers[t.key];
+      save(); refreshTimersEverywhere(); return;
+    }
+    const ctl = b.closest(".timer-ctl"), row = b.closest("[data-key]");
+    if (act === "clear" && row) {
+      delete state.timers[row.dataset.key];
+      save(); refreshTimersEverywhere(); return;
+    }
+    if (!ctl) return;
+    const typeId = ctl.dataset.type, seed = ctl.querySelector("select").value;
+    state.timerSeed[typeId] = seed;
+    if (act === "start") {
+      startTimer(ctl.dataset.key, typeId, seed);
+      toast(`Timer started: ${seed} at ${ctl.dataset.key.split("|")[1]}`);
+    }
+    if (act === "start-all") {
+      const list = reachablePatches(typeId);
+      for (const p of list) startTimer(typeId + "|" + p.name, typeId, seed);
+      toast(`Started ${list.length} ${seed} timers`);
+    }
+    save(); refreshTimersEverywhere();
+  }
+  $("tree-groups").addEventListener("click", onTimerAction);
+  $("tree-timers").addEventListener("click", onTimerAction);
+  $("next-timers").addEventListener("click", onTimerAction);
+  $("tree-groups").addEventListener("change", (e) => {
+    const ctl = e.target.closest(".timer-ctl");
+    if (ctl && e.target.matches("select")) { state.timerSeed[ctl.dataset.type] = e.target.value; save(); }
+  });
+
+  function refreshTimersEverywhere() {
+    renderTrees();
+    renderTimerPanel($("next-timers"), true);
+  }
+  function updateTreeDot() {
+    const btn = document.querySelector('#tabs button[data-tab="trees"]');
+    if (btn) btn.classList.toggle("has-dot", timerList().some(isGrown));
+  }
+
+  // Tick: update countdowns in place, and re-render once when a tree finishes
+  function notifyGrown(t) {
+    const msg = `${t.seed} at ${t.patch} is fully grown`;
+    toast("🌳 " + msg);
+    if ("Notification" in window && Notification.permission === "granted") {
+      const opts = { body: "Time to check its health and harvest.", icon: "icons/icon-192.png", tag: t.key };
+      if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.ready.then((r) => r.showNotification(msg, opts)).catch(() => {});
+      } else {
+        try { new Notification(msg, opts); } catch (err) { /* some browsers only allow SW notifications */ }
+      }
+    }
+  }
+  function timerTick() {
+    let changed = false;
+    for (const t of timerList()) {
+      if (isGrown(t) && !t.notified) {
+        state.timers[t.key].notified = true;
+        changed = true;
+        notifyGrown(t);
+      }
+    }
+    if (changed) { save(); refreshTimersEverywhere(); return; }
+    document.querySelectorAll(".countdown[data-end]").forEach((el) => {
+      const end = +el.dataset.end;
+      el.textContent = Date.now() >= end ? "Fully grown" : `ready in ${duration(end - Date.now())}`;
+    });
+    document.querySelectorAll(".tbar i[data-start]").forEach((el) => {
+      const s0 = +el.dataset.start, e0 = +el.dataset.end;
+      el.style.width = Math.min(100, Math.max(0, (100 * (Date.now() - s0)) / (e0 - s0))).toFixed(1) + "%";
+    });
+  }
+  setInterval(timerTick, 20000);
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") timerTick(); });
+
   wireList($("tree-groups"), "tree", () => {});
 
   // ================================================================ SLAYER
@@ -779,6 +971,7 @@
   refresh();
   showTab(location.hash ? location.hash.slice(1) : state.ui.tab);
   if (state.lastSync) $("sync-status").textContent = `Last successful sync: ${new Date(state.lastSync).toLocaleString()}`;
+  timerTick();
   if (state.autoSync && state.rsn) sync(true);
 
   if ("serviceWorker" in navigator && window.isSecureContext) {

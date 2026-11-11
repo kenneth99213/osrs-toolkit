@@ -299,3 +299,31 @@ details.herbs { margin-top: 12px; }
 .herb { color: var(--locked); }
 .herb.ok { color: var(--ink); }
 .herb b { display: inline-block; min-width: 24px; color: var(--accent); }
+
+/* ---------- tree timers */
+.badge.growing { color: var(--close); background: var(--close-bg); border-color: transparent; }
+.btn.small { padding: 6px 10px; font-size: 0.8rem; }
+.card.timers { padding: 12px 14px; }
+.card.timers.empty p { margin-bottom: 0; }
+.thead { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.thead > b { margin-right: auto; }
+.grown-n { color: var(--ready); font-weight: 700; }
+.timer-list { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 8px; }
+.timer .trow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 0.88rem; }
+.timer .tname { flex: 1 1 180px; min-width: 0; }
+.timer .twhen { font-size: 0.82rem; }
+.timer.grown .countdown { color: var(--ready); font-weight: 700; }
+.timer .bar { margin-top: 5px; }
+.timer.grown .bar i { background: var(--ready); }
+.tclear { border: 0; background: none; color: var(--muted); font-size: 1rem; cursor: pointer; padding: 2px 6px; }
+.timer-ctl { margin: 2px 0 12px; }
+.timer-ctl .row { margin-top: 8px; }
+.timer-ctl select { width: auto; flex: 1 1 180px; padding: 8px 10px; }
+.timer-ctl .tstate { font-size: 0.86rem; }
+.group-ctl { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 4px 0 8px; font-size: 0.85rem; }
+.tabs button { position: relative; }
+.tabs button.has-dot::after {
+  content: ""; position: absolute; top: 9px; left: calc(50% + 8px); width: 9px; height: 9px;
+  border-radius: 50%; background: var(--ready); box-shadow: 0 0 0 2px var(--surface);
+}
+@media (min-width: 900px) { .tabs button.has-dot::after { top: 8px; left: 24px; } }

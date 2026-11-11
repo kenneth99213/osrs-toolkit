@@ -88,10 +88,11 @@ window.OSRS_GUIDES = {
 
   // ======================================================================== TREE PATCHES
   // seeds: [name, Farming level, plant XP, check-health XP, growth time, protection payment]
-  // XP/growth left as null where the wiki didn't give a clear figure.
+  // cycle: minutes per growth stage — the game grows patches on fixed cycles, so real
+  // finish times can be up to one cycle earlier or later than the timer.
   TREE_TYPES: [
     {
-      id: "tree", name: "Tree patches", blurb: "Regular trees. A tree run through all of these is one of the best Farming XP sources.",
+      id: "tree", cycle: 40, name: "Tree patches", blurb: "Regular trees. A tree run through all of these is one of the best Farming XP sources.",
       seeds: [
         ["Oak", 15, 14, 467.3, "3h 20m", "1 basket of tomatoes"],
         ["Willow", 30, 25, 1456.5, "4h 40m", "1 basket of apples"],
@@ -110,7 +111,7 @@ window.OSRS_GUIDES = {
       ],
     },
     {
-      id: "fruit", name: "Fruit tree patches", blurb: "Fruit trees take 16 hours, so one run a day is plenty.",
+      id: "fruit", cycle: 160, name: "Fruit tree patches", blurb: "Fruit trees take 16 hours, so one run a day is plenty.",
       seeds: [
         ["Apple", 27, 22, 1199.5, "16h", "9 sweetcorn"],
         ["Banana", 33, 28, 1750.5, "16h", "4 baskets of apples"],
@@ -132,13 +133,13 @@ window.OSRS_GUIDES = {
       ],
     },
     {
-      id: "hardwood", name: "Hardwood patches", blurb: "Very slow (3+ days) but big XP. Fossil Island has three patches side by side.",
+      id: "hardwood", cycle: 640, name: "Hardwood patches", blurb: "Very slow (3+ days) but big XP. Fossil Island has three patches side by side.",
       seeds: [
         ["Teak", 35, 35, 7290, "3d 2h 40m", "15 limpwurt roots"],
         ["Mahogany", 55, 63, 15720, "3d 13h 20m", "25 Yanillian hops"],
         ["Camphor", 66, 88, 17928, "3d 13h 20m", "10 white berries"],
         ["Ironwood", 80, 145, 20425, "3d 13h 20m", "10 curry leaves"],
-        ["Rosewood", 92, null, null, null, "8 dragonfruit"],
+        ["Rosewood", 92, 252, 23100, "4d", "8 dragonfruit"],
       ],
       patches: [
         { name: "Fossil Island (×3)", where: "Mushroom Forest, Fossil Island", gardener: "Squirrels", req: { pre: ["Bone Voyage"] }, tele: "Digsite pendant (Fossil Island)" },
@@ -147,7 +148,7 @@ window.OSRS_GUIDES = {
       ],
     },
     {
-      id: "calquat", name: "Calquat patches", blurb: "Calquat fruit can be carved into calquat kegs. Only three patches exist.",
+      id: "calquat", cycle: 160, name: "Calquat patches", blurb: "Calquat fruit can be carved into calquat kegs. Only three patches exist.",
       seeds: [["Calquat", 72, 129.5, 12096, "21h 20m", "8 poison ivy berries"]],
       patches: [
         { name: "Tai Bwo Wannai", where: "North of Tai Bwo Wannai, Karamja", gardener: "Imiago", tele: "Fairy ring CKR, Brimhaven house portal" },
@@ -156,7 +157,7 @@ window.OSRS_GUIDES = {
       ],
     },
     {
-      id: "spirit", name: "Spirit tree patches", blurb: "Grown spirit trees join the spirit tree teleport network. You can have 1 at 83 Farming, 2 at 88, 3 at 93, 4 at 96 and unlimited at 99.",
+      id: "spirit", cycle: 320, name: "Spirit tree patches", blurb: "Grown spirit trees join the spirit tree teleport network. You can have 1 at 83 Farming, 2 at 88, 3 at 93, 4 at 96 and unlimited at 99.",
       seeds: [["Spirit tree", 83, 199.5, 19301.8, "2d 16h", "5 monkey nuts, 1 monkey bar, 1 ground tooth"]],
       patches: [
         { name: "Port Sarim", where: "East of Port Sarim", gardener: "Frizzy Skernip", tele: "Explorer's ring 2+, amulet of glory (Draynor)" },
@@ -167,21 +168,21 @@ window.OSRS_GUIDES = {
       ],
     },
     {
-      id: "crystal", name: "Crystal tree patch", blurb: "Can't get diseased, so it never needs protecting.",
+      id: "crystal", cycle: 80, name: "Crystal tree patch", blurb: "Can't get diseased, so it never needs protecting.",
       seeds: [["Crystal tree", 74, 126, 13240, "8h", "None (immune to disease)"]],
       patches: [
         { name: "Prifddinas", where: "Prifddinas", gardener: "Pennant", req: { pre: ["Song of the Elves"] }, tele: "Teleport crystal, Prifddinas house portal" },
       ],
     },
     {
-      id: "celastrus", name: "Celastrus patch", blurb: "Celastrus bark is used for battlestaves via Fletching.",
+      id: "celastrus", cycle: 160, name: "Celastrus patch", blurb: "Celastrus bark is used for battlestaves via Fletching.",
       seeds: [["Celastrus", 85, 204, 14130, "13h 20m", "8 potato cacti"]],
       patches: [
         { name: "Farming Guild", where: "Farming Guild (Kourend)", gardener: "Taylor", req: { skills: { Farming: 85 } }, tele: "Skills necklace, Farming cape, fairy ring CIR" },
       ],
     },
     {
-      id: "redwood", name: "Redwood patch", blurb: "Huge XP and redwood logs, but takes over 4 days.",
+      id: "redwood", cycle: 640, name: "Redwood patch", blurb: "Huge XP and redwood logs, but takes over 4 days.",
       seeds: [["Redwood", 90, 230, 22450, "4d 10h 40m", "6 dragonfruit"]],
       patches: [
         { name: "Farming Guild", where: "Farming Guild (Kourend)", gardener: "Alexandra", req: { skills: { Farming: 85 } }, tele: "Skills necklace, Farming cape, fairy ring CIR" },
