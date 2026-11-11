@@ -331,3 +331,17 @@ details.herbs { margin-top: 12px; }
 /* ---------- pets */
 .tier-tiles.pet-tiles { grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 12px; }
 .tier-tiles.pet-tiles .tile { padding: 10px 12px; }
+
+/* ---------- wiki icons */
+.ico {
+  flex: none; width: 40px; height: 40px; object-fit: contain; margin-left: 10px; margin-right: -4px;
+  border-radius: 10px; background: var(--surface-2);
+}
+img.ico { padding: 3px; image-rendering: auto; }
+.ico-text {
+  display: grid; place-items: center; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.02em; color: var(--muted);
+}
+.item.has-icon .tick { width: 40px; margin-right: -6px; }
+.item.has-icon .tick + .ico { margin-left: 0; }
+.item.has-icon .body { padding-left: 64px; }
+.item.has-icon .item-head .expand { padding-left: 14px; }

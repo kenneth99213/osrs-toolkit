@@ -124,15 +124,37 @@
       }
     };
   }
-  function itemHtml({ id, kind, ticked, cls, title, sub, body }) {
+  function itemHtml({ id, kind, ticked, cls, title, sub, body, icon }) {
     const open = openRows[kind].has(id);
     const tick = ticked === undefined ? "" :
       `<button class="tick" aria-pressed="${ticked}" aria-label="${ticked ? "Mark not done" : "Mark done"}"><span></span></button>`;
-    return `<li class="item ${cls}${open ? " open" : ""}" data-id="${esc(id)}">
-      <div class="item-head">${tick}
+    return `<li class="item ${cls}${open ? " open" : ""}${icon ? " has-icon" : ""}" data-id="${esc(id)}">
+      <div class="item-head">${tick}${icon || ""}
         <button class="expand" aria-expanded="${open}"><span class="title">${esc(title)}</span><span class="sub">${sub}</span></button>
       </div><div class="body">${body}</div></li>`;
   }
+
+  // ---------- images from the OSRS Wiki (small thumbnails, loaded only when scrolled into view)
+  // Each icon has a list of candidate wiki files; if one is missing we try the next, then fall back to initials.
+  const wikiImg = (file) => "https://oldschool.runescape.wiki/w/Special:FilePath/" +
+    encodeURIComponent(file.replace(/ /g, "_")) + "?width=64";
+  function iconHtml(name, files) {
+    const list = files.filter(Boolean).map(wikiImg);
+    const initials = name.replace(/[^A-Za-z0-9 ]/g, "").split(" ").filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
+    if (!list.length) return `<span class="ico ico-text" aria-hidden="true">${esc(initials)}</span>`;
+    return `<img class="ico" src="${list[0]}" data-next="${esc(list.slice(1).join("|"))}" data-initials="${esc(initials)}" ` +
+      `alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">`;
+  }
+  document.addEventListener("error", (e) => {
+    const img = e.target;
+    if (!(img instanceof HTMLImageElement) || !img.classList.contains("ico")) return;
+    const rest = (img.dataset.next || "").split("|").filter(Boolean);
+    if (rest.length) { img.dataset.next = rest.slice(1).join("|"); img.src = rest[0]; return; }
+    const span = document.createElement("span");
+    span.className = "ico ico-text"; span.setAttribute("aria-hidden", "true");
+    span.textContent = img.dataset.initials || "";
+    img.replaceWith(span);
+  }, true);
 
   function toggleIn(list, value) {
     const k = O.norm(value);
@@ -316,6 +338,34 @@
   }
   wireList($("diary-list"), "diary", (key) => { toggleIn(state.diaryDone, key); save(); refresh(); });
 
+  // ---------- boss / monster icons
+  // Wiki image names usually match the page name. Raids and minigames have no single NPC image,
+  // so they use a picture of a boss inside them, or their pet.
+  const PVM_FILE = {
+    "Barrows Chests": "Dharok the Wretched.png", "Lunar Chests": "Blood Moon.png", "Nightmare": "The Nightmare.png",
+    "Phosani's Nightmare": "Phosani's Nightmare.png", "Mimic": "The Mimic.png", "TzKal-Zuk": "TzKal-Zuk.png",
+    "The Royal Titans": "Branda the Fire Queen.png", "Tombs of Amascut": "Tumeken's Warden.png",
+    "Tombs of Amascut: Expert Mode": "Elidinis' Warden.png", "Chambers of Xeric": "Great Olm.png",
+    "Chambers of Xeric: Challenge Mode": "Great Olm.png", "Theatre of Blood": "Verzik Vitur.png",
+    "Theatre of Blood: Hard Mode": "Verzik Vitur.png", "The Gauntlet": "Crystalline Hunllef.png",
+    "The Corrupted Gauntlet": "Corrupted Hunllef.png", "Wintertodt": "Wintertodt.png", "Tempoross": "Tempoross.png",
+  };
+  const PET_FILE = {}; // override pet image names here if the wiki uses a different file name
+  const PVM_PET = {};
+  for (const p of window.OSRS_GUIDES.PETS) for (const [act] of p.src || []) PVM_PET[act] = p.name;
+  Object.assign(PVM_PET, {
+    "Chambers of Xeric": "Olmlet", "Chambers of Xeric: Challenge Mode": "Olmlet", "Theatre of Blood": "Lil' Zik",
+    "Theatre of Blood: Hard Mode": "Lil' Zik", "Tombs of Amascut": "Tumeken's guardian", "Tombs of Amascut: Expert Mode": "Tumeken's guardian",
+    "The Gauntlet": "Youngllef", "The Corrupted Gauntlet": "Youngllef", "Nightmare": "Little nightmare", "Phosani's Nightmare": "Little nightmare",
+    "The Royal Titans": "Bran", "Wintertodt": "Phoenix", "Tempoross": "Tiny tempor", "Doom of Mokhaiotl": "Dom",
+    "Maggot King": "Maggot marquess", "Araxxor": "Nid", "Orion": "Orion",
+  });
+  function pvmIcon(name) {
+    const info = O.PVM[name] || {};
+    const pet = PVM_PET[name];
+    return iconHtml(name, [PVM_FILE[name], (info.wiki || name) + ".png", pet && (PET_FILE[pet] || pet + ".png")]);
+  }
+
   // ================================================================ PVM
   function renderPvm() {
     const a = account, f = state.ui.pvm;
@@ -344,7 +394,7 @@
           ${r.problems.length ? `<dt>Still needed</dt><dd>${esc(r.problems.join(", "))}</dd>` : ""}
           ${r.note || r.onTask ? `<dt>Notes</dt><dd>${esc(r.note)}${r.onTask ? `${r.note ? " · " : ""}Slayer task only` : ""}</dd>` : ""}
         </dl><a class="wiki" href="${wikiUrl(r.wiki)}" target="_blank" rel="noopener">Open wiki page ↗</a>`;
-      return itemHtml({ id: r.name, kind: "pvm", cls, title: r.name, sub, body });
+      return itemHtml({ id: r.name, kind: "pvm", cls, title: r.name, sub, body, icon: pvmIcon(r.name) });
     }).join("") || `<p class="hint">Nothing here.</p>`;
   }
   $("pvm-search").addEventListener("input", () => renderPvm());
@@ -725,7 +775,8 @@
           ${odds ? `<dt>Your luck</dt><dd>${fmt(odds.kc)} kill count — ${odds.pct.toFixed(1)}% of players would have it by now${odds.pct >= 63.2 ? " (you're past the drop rate — dry!)" : ""}</dd>` : ""}
           ${p.cat === "Generic" ? `<dt>Note</dt><dd>Not part of the collection log.</dd>` : ""}
         </dl><a class="wiki" href="${wikiUrl(p.name)}" target="_blank" rel="noopener">Open wiki page ↗</a>`;
-      return itemHtml({ id: p.name, kind: "pet", ticked: got, cls: got ? "is-done" : "", title: p.name, sub, body });
+      return itemHtml({ id: p.name, kind: "pet", ticked: got, cls: got ? "is-done" : "", title: p.name, sub, body,
+                        icon: iconHtml(p.name, [PET_FILE[p.name] || p.name + ".png"]) });
     }).join("") || `<p class="hint">No pets match.</p>`;
   }
   $("pet-search").addEventListener("input", () => renderPets());
