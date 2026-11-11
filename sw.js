@@ -2,7 +2,7 @@
 // Network-first: when you're online you always get the newest files from GitHub
 // (so updates show up on the next reload); the saved copy is only used offline.
 // Live price/hiscore requests are never cached.
-const CACHE = "osrs-toolkit-v9";
+const CACHE = "osrs-toolkit-v10";
 const SHELL = [
   "./", "index.html", "style.css", "app.js", "logic.js", "data.js", "guides-data.js", "manifest.webmanifest",
   "icons/icon.svg", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png", "icons/favicon-32.png",

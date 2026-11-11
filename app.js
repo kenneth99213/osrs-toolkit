@@ -266,38 +266,41 @@
         <div class="bar"><i></i></div>
         <div class="lines"></div>
       </div>`).join("");
-    const setLevel = (skill, value, input) => {
-      const lvl = Math.min(99, Math.max(O.minLevel(skill), parseInt(value, 10) || O.minLevel(skill)));
-      if (input && String(lvl) !== input.value && document.activeElement !== input) input.value = lvl;
-      if (levelOf(skill) === lvl && state.levels[skill] !== undefined) return;
-      state.levels[skill] = lvl;
-      delete state.xp[skill]; // a typed level replaces synced XP
-      save();
-      scheduleRefresh();
-    };
-    $("skills").addEventListener("click", (e) => {
-      const b = e.target.closest("button[data-step]");
-      if (!b) return;
-      const card = b.closest(".skill"), input = card.querySelector("input"), s = card.dataset.skill;
-      const v = Math.min(99, Math.max(O.minLevel(s), levelOf(s) + Number(b.dataset.step)));
-      input.value = v;
-      setLevel(s, v, input);
-    });
-    $("skills").addEventListener("input", (e) => {
-      if (e.target.matches("input")) {
-        const s = e.target.closest(".skill").dataset.skill;
-        if (e.target.value !== "") setLevel(s, e.target.value);
-      }
-    });
-    $("skills").addEventListener("change", (e) => {
-      if (e.target.matches("input")) {
-        const s = e.target.closest(".skill").dataset.skill;
-        e.target.value = levelOf(s);
-        setLevel(s, e.target.value, e.target);
-      }
-    });
     skillsBuilt = true;
   }
+
+  // These listeners live on the #skills container, which is never replaced, so they're added ONCE.
+  // (Adding them inside buildSkills made every rebuild stack another copy, so + went up by 2, 3, ...)
+  const setLevel = (skill, value, input) => {
+    const lvl = Math.min(99, Math.max(O.minLevel(skill), parseInt(value, 10) || O.minLevel(skill)));
+    if (input && String(lvl) !== input.value && document.activeElement !== input) input.value = lvl;
+    if (levelOf(skill) === lvl && state.levels[skill] !== undefined) return;
+    state.levels[skill] = lvl;
+    delete state.xp[skill]; // a typed level replaces synced XP
+    save();
+    scheduleRefresh();
+  };
+  $("skills").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-step]");
+    if (!b) return;
+    const card = b.closest(".skill"), input = card.querySelector("input"), s = card.dataset.skill;
+    const v = Math.min(99, Math.max(O.minLevel(s), levelOf(s) + Number(b.dataset.step)));
+    input.value = v;
+    setLevel(s, v, input);
+  });
+  $("skills").addEventListener("input", (e) => {
+    if (e.target.matches("input")) {
+      const s = e.target.closest(".skill").dataset.skill;
+      if (e.target.value !== "") setLevel(s, e.target.value);
+    }
+  });
+  $("skills").addEventListener("change", (e) => {
+    if (e.target.matches("input")) {
+      const s = e.target.closest(".skill").dataset.skill;
+      e.target.value = levelOf(s);
+      setLevel(s, e.target.value, e.target);
+    }
+  });
 
   function renderSkills() {
     if (!skillsBuilt) buildSkills();
