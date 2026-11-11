@@ -10,6 +10,7 @@ An installable web app for Old School RuneScape. It works on your phone and your
 - **Slayer**: all 116 Slayer tasks, with where to kill them (including Konar's official location lists), what to bring, which masters assign them, and whether you meet the requirements.
 - **Potions**: every Herblore potion (71) with its recipe, XP and effect, marked by what your Herblore level can make, plus herb cleaning levels.
 - **Trees**: all 28 tree-type farming patches, grouped by patch type (tree, fruit tree, hardwood, calquat, spirit, crystal, celastrus, redwood), with seed levels, XP, growth times, protection payments, and which patches your quests and levels unlock.
+- **Pets**: a checklist of all 83 pets (72 collection-log pets plus 11 generic ones) with drop rates. After a hiscores sync, boss pets show your kill count and how unlucky you've been.
 - **Alch**: a live, ranked list of the most profitable items to high alch, refreshed every minute from the OSRS Wiki's real-time prices.
 
 Your levels and ticks are saved in your browser. Nothing is uploaded anywhere.
@@ -74,7 +75,7 @@ Edit the files and push them to GitHub. Installed copies pick up the new version
 | `index.html`, `style.css`, `app.js` | The app itself |
 | `logic.js` | The advice engine (a direct port of the desktop app's `Account` class) |
 | `data.js` | Quest, diary, PvM and training data |
-| `guides-data.js` | Potion, tree patch and Slayer task data |
+| `guides-data.js` | Potion, tree patch, Slayer task and pet data |
 | `sw.js`, `manifest.webmanifest`, `icons/` | What makes it installable and work offline |
 | `proxy/worker.js` | Optional live-sync proxy (Cloudflare Worker) |
 

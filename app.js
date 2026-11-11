@@ -14,7 +14,7 @@
     v: 1, levels: {}, xp: {}, done: [], diaryDone: [], kc: {},
     rsn: "", proxy: "", autoSync: false, lastSync: null,
     ui: { tab: "next", quests: "notdone", diaries: "notdone", pvm: "all" },
-    timers: {}, timerSeed: {},
+    timers: {}, timerSeed: {}, pets: [],
     alch: { minProfit: 1, minVol: 0, mode: "instant", sort: "profit", members: true },
   });
   let state = load();
@@ -55,7 +55,7 @@
   }
 
   // ================================================================ tabs
-  const TABS = ["next", "stats", "quests", "diaries", "pvm", "slayer", "potions", "trees", "alch"];
+  const TABS = ["next", "stats", "quests", "diaries", "pvm", "slayer", "potions", "trees", "pets", "alch"];
   function showTab(tab, push) {
     if (!TABS.includes(tab)) tab = "next";
     state.ui.tab = tab;
@@ -109,7 +109,7 @@
   }
 
   // expanding rows: remember which are open per list
-  const openRows = { quest: new Set(), diary: new Set(), pvm: new Set(), potion: new Set(), tree: new Set(), slayer: new Set() };
+  const openRows = { quest: new Set(), diary: new Set(), pvm: new Set(), potion: new Set(), tree: new Set(), slayer: new Set(), pet: new Set() };
   function wireList(el, kind, onTick) {
     el.onclick = (e) => {
       const item = e.target.closest(".item");
@@ -680,6 +680,62 @@
   $("slayer-mine").checked = !!state.ui.slayerMine;
   wireList($("slayer-list"), "slayer", () => {});
 
+  // ================================================================ PETS
+  function petOdds(p) {
+    // chance an average player would have this pet by now, from synced kill counts
+    if (!p.src) return null;
+    let kc = 0, miss = 1;
+    for (const [act, n] of p.src) {
+      const k = state.kc[act] || 0;
+      kc += k;
+      miss *= Math.pow(1 - 1 / n, k);
+    }
+    return kc ? { kc, pct: (1 - miss) * 100 } : null;
+  }
+  function renderPets() {
+    const f = state.ui.pets || "all";
+    const owned = new Set((state.pets || []).map(O.norm));
+    const has = (p) => owned.has(O.norm(p.name));
+    const all = G.PETS;
+    const logPets = all.filter((p) => p.cat !== "Generic");
+    const counts = { all: all.length, todo: all.filter((p) => !has(p)).length, owned: all.filter(has).length };
+    for (const c of ["Boss", "Skilling", "Other", "Generic"]) counts[c] = all.filter((p) => p.cat === c).length;
+    chips($("pet-chips"), [["all", "All"], ["todo", "Still need"], ["owned", "Owned"], ["Boss", "Boss"],
+      ["Skilling", "Skilling"], ["Other", "Other"], ["Generic", "Generic"]], f, counts,
+      (k) => { state.ui.pets = k; save(); renderPets(); });
+    const search = $("pet-search").value.trim().toLowerCase();
+    let rows = all;
+    if (f === "todo") rows = rows.filter((p) => !has(p));
+    else if (f === "owned") rows = rows.filter(has);
+    else if (f !== "all") rows = rows.filter((p) => p.cat === f);
+    if (search) rows = rows.filter((p) => (p.name + " " + p.from).toLowerCase().includes(search));
+    const logOwned = logPets.filter(has).length;
+    $("pet-summary").innerHTML = `<div class="tile"><div class="big">${logOwned}<small> / ${logPets.length}</small></div>
+        <div class="lbl">Collection log pets</div><div class="bar"><i style="width:${(100 * logOwned / logPets.length).toFixed(1)}%"></i></div></div>
+      <div class="tile"><div class="big">${all.filter((p) => p.cat === "Generic" && has(p)).length}<small> / ${counts.Generic}</small></div>
+        <div class="lbl">Generic pets</div><div class="bar"><i style="width:${(100 * all.filter((p) => p.cat === "Generic" && has(p)).length / counts.Generic).toFixed(1)}%"></i></div></div>`;
+    $("pet-list").innerHTML = rows.map((p) => {
+      const got = has(p);
+      const odds = got ? null : petOdds(p);
+      const dry = odds ? `<span>· ${fmt(odds.kc)} KC · ${odds.pct < 1 ? "<1" : Math.round(odds.pct)}% would have it by now</span>` : "";
+      const sub = `${got ? statusBadge("Done") : `<span class="badge">${esc(p.cat)}</span>`}<span>${esc(p.from)}</span>${dry}`;
+      const body = `<dl>
+          <dt>From</dt><dd>${esc(p.from)}</dd>
+          <dt>Drop rate</dt><dd>${esc(p.rate)}</dd>
+          ${odds ? `<dt>Your luck</dt><dd>${fmt(odds.kc)} kill count — ${odds.pct.toFixed(1)}% of players would have it by now${odds.pct >= 63.2 ? " (you're past the drop rate — dry!)" : ""}</dd>` : ""}
+          ${p.cat === "Generic" ? `<dt>Note</dt><dd>Not part of the collection log.</dd>` : ""}
+        </dl><a class="wiki" href="${wikiUrl(p.name)}" target="_blank" rel="noopener">Open wiki page ↗</a>`;
+      return itemHtml({ id: p.name, kind: "pet", ticked: got, cls: got ? "is-done" : "", title: p.name, sub, body });
+    }).join("") || `<p class="hint">No pets match.</p>`;
+  }
+  $("pet-search").addEventListener("input", () => renderPets());
+  wireList($("pet-list"), "pet", (name) => {
+    state.pets = state.pets || [];
+    toggleIn(state.pets, name);
+    save(); renderPets();
+    if (state.pets.some((x) => O.norm(x) === O.norm(name))) toast(`🐾 ${name} added to your pets`);
+  });
+
   // ================================================================ refresh everything
   let refreshTimer = null;
   function scheduleRefresh() {
@@ -697,6 +753,7 @@
     renderSlayer();
     renderPotions();
     renderTrees();
+    renderPets();
   }
 
   // ================================================================ SYNC (hiscores + WikiSync)
@@ -817,6 +874,7 @@
       state.done = done.map((q) => (q === "Hero's Quest" ? "Heroes' Quest" : q));
       state.diaryDone = diaryDone;
       state.kc = desktop ? {} : data.kc || {};
+      if (!desktop) { state.pets = data.pets || []; state.timers = data.timers || {}; state.timerSeed = data.timerSeed || {}; }
       if (data.username || data.rsn) state.rsn = data.username || data.rsn;
       save(); skillsBuilt = false; $("rsn").value = state.rsn; refresh();
       toast(desktop ? "Imported from the desktop app" : "Backup restored");
