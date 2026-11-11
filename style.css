@@ -345,3 +345,6 @@ img.ico { padding: 3px; image-rendering: auto; }
 .item.has-icon .tick + .ico { margin-left: 0; }
 .item.has-icon .body { padding-left: 64px; }
 .item.has-icon .item-head .expand { padding-left: 14px; }
+
+/* 11 tabs: on narrower desktops keep them centred but never clipped */
+@media (min-width: 900px) { .tabs { justify-content: safe center; overflow-x: auto; } }

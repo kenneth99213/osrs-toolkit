@@ -36,6 +36,7 @@
     <button data-tab="potions"><svg viewBox="0 0 24 24"><path d="M10 3h4M10.5 3v5L6 16a3.5 3.5 0 003 5h6a3.5 3.5 0 003-5l-4.5-8V3"/><path d="M7.5 14h9"/></svg><span>Potions</span></button>
     <button data-tab="trees"><svg viewBox="0 0 24 24"><path d="M12 21v-6M12 15c-4 0-7-2.5-7-6a7 7 0 0114 0c0 3.5-3 6-7 6z"/><path d="M9 21h6"/></svg><span>Trees</span></button>
     <button data-tab="pets"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="16" rx="4.5" ry="3.8"/><circle cx="6" cy="10.5" r="1.8"/><circle cx="18" cy="10.5" r="1.8"/><circle cx="9.3" cy="6.5" r="1.8"/><circle cx="14.7" cy="6.5" r="1.8"/></svg><span>Pets</span></button>
+    <button data-tab="guilds"><svg viewBox="0 0 24 24"><path d="M5 21V4M5 4h11l-2 3.5L16 11H5"/></svg><span>Guilds</span></button>
     <button data-tab="alch"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><path d="M12 8v8M9.5 10.5h4a1.5 1.5 0 010 3h-3a1.5 1.5 0 000 3h4"/></svg><span>Alch</span></button>
   </nav>
 
@@ -157,6 +158,16 @@
         <p class="hint">Tick the box when you get a pet. After a hiscores sync, boss pets show your kill count and how unlucky you've been.</p>
       </div>
       <ul class="list" id="pet-list"></ul>
+    </section>
+
+    <!-- GUILDS -->
+    <section class="view" id="view-guilds">
+      <div class="toolbar">
+        <div class="chips" id="guild-chips"></div>
+        <p class="hint" id="guild-status"></p>
+      </div>
+      <ul class="list" id="guild-list"></ul>
+      <p class="hint">Tap a guild for its location, requirements, how to get there and what's inside.</p>
     </section>
 
     <!-- ALCH -->

@@ -55,7 +55,7 @@
   }
 
   // ================================================================ tabs
-  const TABS = ["next", "stats", "quests", "diaries", "pvm", "slayer", "potions", "trees", "pets", "alch"];
+  const TABS = ["next", "stats", "quests", "diaries", "pvm", "slayer", "potions", "trees", "pets", "guilds", "alch"];
   function showTab(tab, push) {
     if (!TABS.includes(tab)) tab = "next";
     state.ui.tab = tab;
@@ -109,7 +109,7 @@
   }
 
   // expanding rows: remember which are open per list
-  const openRows = { quest: new Set(), diary: new Set(), pvm: new Set(), potion: new Set(), tree: new Set(), slayer: new Set(), pet: new Set() };
+  const openRows = { quest: new Set(), diary: new Set(), pvm: new Set(), potion: new Set(), tree: new Set(), slayer: new Set(), pet: new Set(), guild: new Set() };
   function wireList(el, kind, onTick) {
     el.onclick = (e) => {
       const item = e.target.closest(".item");
@@ -852,6 +852,55 @@
     if (state.pets.some((x) => O.norm(x) === O.norm(name))) toast(`🐾 ${name} added to your pets`);
   });
 
+  // ================================================================ GUILDS
+  const GUILD_ITEM = { "Cooks' Guild": "wear a chef's hat (or an alternative)", "Crafting Guild": "wear a brown apron (or an alternative)" };
+  function guildStatus(g) {
+    const a = account;
+    let missing = [];
+    if (g.req.attstr) {
+      const sum = a.levels.Attack + a.levels.Strength;
+      if (sum < g.req.attstr && a.levels.Attack < 99 && a.levels.Strength < 99) missing.push(`Attack + Strength ${sum}/${g.req.attstr}`);
+    } else {
+      missing = a.check(g.req)[0];
+    }
+    const ok = missing.length === 0;
+    // "Close" only when the one thing missing is a level within 5
+    const gap = missing.length === 1 && /(\d+)\/(\d+)$/.exec(missing[0]);
+    const close = gap && +gap[2] - +gap[1] <= 5 && !/QP|quest points/i.test(missing[0]);
+    const label = !ok ? (close ? "Close" : "Locked") : GUILD_ITEM[g.name] ? "Check" : "Ready";
+    return { ok, missing, label };
+  }
+  function renderGuilds() {
+    const f = state.ui.guilds || "all";
+    const all = G.GUILDS.map((g) => Object.assign({ g }, guildStatus(g)));
+    const counts = { all: all.length, can: all.filter((r) => r.ok).length, locked: all.filter((r) => !r.ok).length,
+                     f2p: all.filter((r) => !r.g.members).length, members: all.filter((r) => r.g.members).length };
+    chips($("guild-chips"), [["all", "All"], ["can", "Can enter"], ["locked", "Locked"], ["f2p", "Free-to-play"], ["members", "Members"]],
+      f, counts, (k) => { state.ui.guilds = k; save(); renderGuilds(); });
+    let rows = all;
+    if (f === "can") rows = rows.filter((r) => r.ok);
+    if (f === "locked") rows = rows.filter((r) => !r.ok);
+    if (f === "f2p") rows = rows.filter((r) => !r.g.members);
+    if (f === "members") rows = rows.filter((r) => r.g.members);
+    $("guild-status").innerHTML = `You can enter <b>${counts.can}</b> of ${all.length} guilds`;
+    $("guild-list").innerHTML = rows.map(({ g, ok, missing, label }) => {
+      const cls = label === "Ready" ? "is-ready" : label === "Locked" ? "is-locked" : "is-close";
+      const sub = `${statusBadge(label)}<span>${g.members ? "Members" : "F2P"} · ${esc(g.region)}</span>` +
+        (!ok ? `<span>· needs ${esc(missing.join(", "))}</span>` : GUILD_ITEM[g.name] ? `<span>· ${esc(GUILD_ITEM[g.name])}</span>` : "");
+      const req = g.req.attstr
+        ? `<span class="req"><span class="${ok ? "ok" : "miss"}">${esc(g.reqText)}</span></span>`
+        : `${reqList(g.req)}<br><span class="muted">${esc(g.reqText)}</span>`;
+      const body = `<dl>
+          <dt>Location</dt><dd>${esc(g.where)}</dd>
+          <dt>Requires</dt><dd>${req}</dd>
+          <dt>Get there</dt><dd><ul class="locs">${g.tele.map((t) => `<li>${esc(t)}</li>`).join("")}</ul></dd>
+          <dt>Inside</dt><dd><ul class="locs">${g.features.map((t) => `<li>${esc(t)}</li>`).join("")}</ul></dd>
+        </dl><a class="wiki" href="${wikiUrl(g.name)}" target="_blank" rel="noopener">Open wiki page ↗</a>`;
+      return itemHtml({ id: g.name, kind: "guild", cls, title: g.name, sub, body });
+    }).join("") || `<p class="hint">No guilds match.</p>`;
+  }
+  wireList($("guild-list"), "guild", () => {});
+
   // ================================================================ refresh everything
   let refreshTimer = null;
   function scheduleRefresh() {
@@ -870,6 +919,7 @@
     renderPotions();
     renderTrees();
     renderPets();
+    renderGuilds();
   }
 
   // ================================================================ SYNC (hiscores + WikiSync)
