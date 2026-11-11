@@ -135,25 +135,83 @@
   }
 
   // ---------- images from the OSRS Wiki (small thumbnails, loaded only when scrolled into view)
-  // Each icon has a list of candidate wiki files; if one is missing we try the next, then fall back to initials.
-  const wikiImg = (file) => "https://oldschool.runescape.wiki/w/Special:FilePath/" +
-    encodeURIComponent(file.replace(/ /g, "_")) + "?width=64";
-  function iconHtml(name, files) {
+  // Each icon has a list of candidate wiki files. If they're all missing, we ask the wiki's API which
+  // image the page itself uses (handles odd file names and redirects), then fall back to initials.
+  const WIKI = "https://oldschool.runescape.wiki";
+  const wikiImg = (file) => `${WIKI}/w/Special:FilePath/` + encodeURIComponent(file.replace(/ /g, "_")) + "?width=64";
+  function iconHtml(name, files, page) {
     const list = files.filter(Boolean).map(wikiImg);
     const initials = name.replace(/[^A-Za-z0-9 ]/g, "").split(" ").filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
+    const cached = page ? imgCache[page] : undefined;
+    if (cached) list.unshift(cached);                     // remembered from an earlier API lookup
     if (!list.length) return `<span class="ico ico-text" aria-hidden="true">${esc(initials)}</span>`;
-    return `<img class="ico" src="${list[0]}" data-next="${esc(list.slice(1).join("|"))}" data-initials="${esc(initials)}" ` +
-      `alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">`;
+    return `<img class="ico" src="${esc(list[0])}" data-next="${esc(list.slice(1).join("|"))}" data-initials="${esc(initials)}" ` +
+      `data-page="${esc(cached === "" ? "" : page || "")}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">`;
+  }
+  // page title -> thumbnail URL ("" = the wiki has no image for it), kept between visits
+  const IMG_CACHE_KEY = "osrs-toolkit-img-v1";
+  let imgCache = {};
+  try { imgCache = JSON.parse(localStorage.getItem(IMG_CACHE_KEY) || "{}"); } catch (e) { imgCache = {}; }
+  const saveImgCache = () => { try { localStorage.setItem(IMG_CACHE_KEY, JSON.stringify(imgCache)); } catch (e) { /* ignore */ } };
+  function toInitials(img) {
+    const span = document.createElement("span");
+    span.className = "ico ico-text"; span.setAttribute("aria-hidden", "true");
+    span.textContent = img.dataset.initials || "";
+    img.replaceWith(span);
+  }
+  // batch API lookups: up to 50 page titles per request
+  const pending = new Map(); // title -> [img, ...]
+  let lookupTimer = null;
+  function lookupPageImage(title, img) {
+    if (!pending.has(title)) pending.set(title, []);
+    pending.get(title).push(img);
+    clearTimeout(lookupTimer);
+    lookupTimer = setTimeout(flushLookups, 150);
+  }
+  async function flushLookups() {
+    const titles = [...pending.keys()].slice(0, 50);
+    const waiting = titles.map((t) => [t, pending.get(t)]);
+    titles.forEach((t) => pending.delete(t));
+    if (pending.size) lookupTimer = setTimeout(flushLookups, 150);
+    const found = {};
+    try {
+      const url = `${WIKI}/api.php?action=query&prop=pageimages&piprop=thumbnail&pithumbsize=64&redirects=1` +
+        `&format=json&formatversion=2&origin=*&titles=${encodeURIComponent(titles.join("|"))}`;
+      const data = await (await fetch(url)).json();
+      const q = data.query || {};
+      const alias = {};
+      for (const r of [...(q.normalized || []), ...(q.redirects || [])]) alias[r.to] = r.from;
+      for (const pg of q.pages || []) {
+        let t = pg.title;
+        const seen = new Set([t]);
+        while (alias[t] && !seen.has(alias[t])) { t = alias[t]; seen.add(t); }
+        const thumb = pg.thumbnail && pg.thumbnail.source;
+        for (const s of seen) found[s] = thumb || "";
+      }
+    } catch (e) { /* offline or API unavailable: fall through to initials, don't cache */ }
+    for (const [title, imgs] of waiting) {
+      const url = found[title];
+      if (url !== undefined) imgCache[title] = url;
+      for (const img of imgs) {
+        if (!img.isConnected) continue;
+        if (url) { img.dataset.page = ""; img.src = url; } else toInitials(img);
+      }
+    }
+    saveImgCache();
   }
   document.addEventListener("error", (e) => {
     const img = e.target;
     if (!(img instanceof HTMLImageElement) || !img.classList.contains("ico")) return;
     const rest = (img.dataset.next || "").split("|").filter(Boolean);
     if (rest.length) { img.dataset.next = rest.slice(1).join("|"); img.src = rest[0]; return; }
-    const span = document.createElement("span");
-    span.className = "ico ico-text"; span.setAttribute("aria-hidden", "true");
-    span.textContent = img.dataset.initials || "";
-    img.replaceWith(span);
+    const page = img.dataset.page;
+    if (page) {
+      img.dataset.page = "";
+      if (imgCache[page]) { delete imgCache[page]; saveImgCache(); } // a cached URL went stale
+      lookupPageImage(page, img);
+      return;
+    }
+    toInitials(img);
   }, true);
 
   function toggleIn(list, value) {
@@ -350,20 +408,23 @@
     "Theatre of Blood: Hard Mode": "Verzik Vitur.png", "The Gauntlet": "Crystalline Hunllef.png",
     "The Corrupted Gauntlet": "Corrupted Hunllef.png", "Wintertodt": "Wintertodt.png", "Tempoross": "Tempoross.png",
   };
-  const PET_FILE = {}; // override pet image names here if the wiki uses a different file name
+  const PET_IMG = {};
+  for (const p of window.OSRS_GUIDES.PETS) PET_IMG[p.name] = p.img || p.name + ".png";
   const PVM_PET = {};
   for (const p of window.OSRS_GUIDES.PETS) for (const [act] of p.src || []) PVM_PET[act] = p.name;
   Object.assign(PVM_PET, {
     "Chambers of Xeric": "Olmlet", "Chambers of Xeric: Challenge Mode": "Olmlet", "Theatre of Blood": "Lil' Zik",
     "Theatre of Blood: Hard Mode": "Lil' Zik", "Tombs of Amascut": "Tumeken's guardian", "Tombs of Amascut: Expert Mode": "Tumeken's guardian",
-    "The Gauntlet": "Youngllef", "The Corrupted Gauntlet": "Youngllef", "Nightmare": "Little nightmare", "Phosani's Nightmare": "Little nightmare",
+    "The Gauntlet": "Youngllef", "The Corrupted Gauntlet": "Youngllef", "Nightmare": "Little Nightmare", "Phosani's Nightmare": "Little Nightmare",
     "The Royal Titans": "Bran", "Wintertodt": "Phoenix", "Tempoross": "Tiny tempor", "Doom of Mokhaiotl": "Dom",
     "Maggot King": "Maggot marquess", "Araxxor": "Nid", "Orion": "Orion",
   });
+  // monsters whose wiki page isn't simply their name here
+  const PVM_PAGE = { "Fossil Island wyvern": "Spitting wyvern", "Mutated zygomite": "Mutated Zygomite", "Sulphur nagua": "Sulphur Nagua" };
   function pvmIcon(name) {
     const info = O.PVM[name] || {};
     const pet = PVM_PET[name];
-    return iconHtml(name, [PVM_FILE[name], (info.wiki || name) + ".png", pet && (PET_FILE[pet] || pet + ".png")]);
+    return iconHtml(name, [PVM_FILE[name], (info.wiki || name) + ".png", pet && PET_IMG[pet]], PVM_PAGE[name] || info.wiki || name);
   }
 
   // ================================================================ PVM
@@ -722,7 +783,8 @@
           ${t.note ? `<dt>Bring / note</dt><dd>${esc(t.note)}</dd>` : ""}
           <dt>Assigned by</dt><dd>${esc(masters)}</dd>
         </dl><a class="wiki" href="${wikiUrl("Slayer task/" + t.name)}" target="_blank" rel="noopener">Open wiki page ↗</a>`;
-      return itemHtml({ id: t.name, kind: "slayer", cls, title: t.name, sub, body });
+      return itemHtml({ id: t.name, kind: "slayer", cls, title: t.name, sub, body,
+                        icon: iconHtml(t.name, [(t.npc || t.name) + ".png"], t.npc || t.name) });
     }).join("") || `<p class="hint">No tasks match.</p>`;
   }
   $("slayer-search").addEventListener("input", () => renderSlayer());
@@ -776,7 +838,7 @@
           ${p.cat === "Generic" ? `<dt>Note</dt><dd>Not part of the collection log.</dd>` : ""}
         </dl><a class="wiki" href="${wikiUrl(p.name)}" target="_blank" rel="noopener">Open wiki page ↗</a>`;
       return itemHtml({ id: p.name, kind: "pet", ticked: got, cls: got ? "is-done" : "", title: p.name, sub, body,
-                        icon: iconHtml(p.name, [PET_FILE[p.name] || p.name + ".png"]) });
+                        icon: iconHtml(p.name, [p.img || p.name + ".png"], p.name) });
     }).join("") || `<p class="hint">No pets match.</p>`;
   }
   $("pet-search").addEventListener("input", () => renderPets());
