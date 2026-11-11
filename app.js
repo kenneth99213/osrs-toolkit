@@ -54,7 +54,7 @@
   }
 
   // ================================================================ tabs
-  const TABS = ["next", "stats", "quests", "diaries", "pvm", "alch"];
+  const TABS = ["next", "stats", "quests", "diaries", "pvm", "slayer", "potions", "trees", "alch"];
   function showTab(tab, push) {
     if (!TABS.includes(tab)) tab = "next";
     state.ui.tab = tab;
@@ -67,6 +67,8 @@
     if (push && location.hash !== "#" + tab) history.replaceState(null, "", "#" + tab);
     if (tab === "alch") alchStart();
     window.scrollTo({ top: 0 });
+    const btn = document.querySelector(`#tabs button[data-tab="${tab}"]`);
+    if (btn && btn.scrollIntoView) btn.scrollIntoView({ block: "nearest", inline: "center" });
   }
   $("tabs").addEventListener("click", (e) => {
     const b = e.target.closest("button[data-tab]");
@@ -86,7 +88,7 @@
   }
 
   function statusBadge(kind) {
-    const cls = { Ready: "ready", READY: "ready", Close: "close", Almost: "close", Done: "done" }[kind] || "";
+    const cls = { Ready: "ready", READY: "ready", Close: "close", Almost: "close", Check: "close", Done: "done" }[kind] || "";
     return `<span class="badge ${cls}">${esc(kind)}</span>`;
   }
 
@@ -106,7 +108,7 @@
   }
 
   // expanding rows: remember which are open per list
-  const openRows = { quest: new Set(), diary: new Set(), pvm: new Set() };
+  const openRows = { quest: new Set(), diary: new Set(), pvm: new Set(), potion: new Set(), tree: new Set(), slayer: new Set() };
   function wireList(el, kind, onTick) {
     el.onclick = (e) => {
       const item = e.target.closest(".item");
@@ -346,6 +348,146 @@
   $("pvm-search").addEventListener("input", () => renderPvm());
   wireList($("pvm-list"), "pvm", () => {});
 
+  // ================================================================ POTIONS
+  const G = window.OSRS_GUIDES;
+  const HERB_NAMES = new Set(G.HERBS.map(([h]) => h));
+  function renderPotions() {
+    const a = account, f = state.ui.potions || "all";
+    const herb = a.levels.Herblore;
+    const ritual = a.questDone("Druidic Ritual");
+    const search = $("potion-search").value.trim().toLowerCase();
+    const can = (p) => ritual && herb >= p.lvl;
+    const all = G.POTIONS;
+    const counts = { all: all.length, can: all.filter(can).length,
+                     soon: all.filter((p) => !can(p) && p.lvl > herb && p.lvl <= herb + 10).length };
+    chips($("potion-chips"), [["all", "All"], ["can", "Can make"], ["soon", "Next 10 levels"]], f, counts,
+      (k) => { state.ui.potions = k; save(); renderPotions(); });
+    let rows = all;
+    if (f === "can") rows = rows.filter(can);
+    if (f === "soon") rows = rows.filter((p) => !can(p) && p.lvl > herb && p.lvl <= herb + 10);
+    if (search) rows = rows.filter((p) => (p.name + " " + p.ing.join(" ") + " " + p.effect).toLowerCase().includes(search));
+    $("potion-status").innerHTML = `Your Herblore: <b>${herb}</b> · ${counts.can} of ${all.length} potions available` +
+      (ritual ? "" : ` · <span class="warn">Finish Druidic Ritual to start Herblore</span>`);
+    $("potion-list").innerHTML = rows.map((p) => {
+      const ok = can(p);
+      const status = ok ? "Ready" : p.lvl <= herb + 5 ? "Close" : "Locked";
+      const cls = ok ? "is-ready" : status === "Close" ? "is-close" : "is-locked";
+      const usesHerb = HERB_NAMES.has(p.ing[0]);
+      const recipe = (usesHerb ? ["Vial of water"] : []).concat(p.ing).map(esc).join(" + ");
+      const sub = `${statusBadge(status)}<span>Level ${p.lvl}</span><span>· ${fmt(p.xp)} XP</span>` +
+        `<span>· ${esc(p.ing.slice(0, 2).join(" + "))}${p.ing.length > 2 ? " + …" : ""}</span>`;
+      const body = `<dl>
+          <dt>Recipe</dt><dd>${recipe}${usesHerb ? `<br><span class="muted">Herb + vial of water first makes an unfinished potion.</span>` : ""}</dd>
+          <dt>Effect</dt><dd>${esc(p.effect)}</dd>
+          ${p.note ? `<dt>Note</dt><dd>${esc(p.note)}</dd>` : ""}
+          <dt>Needs</dt><dd>${reqList({ skills: { Herblore: p.lvl }, pre: ["Druidic Ritual"] })}</dd>
+        </dl><a class="wiki" href="${wikiUrl(p.name)}" target="_blank" rel="noopener">Open wiki page ↗</a>`;
+      return itemHtml({ id: p.name, kind: "potion", cls, title: p.name, sub, body });
+    }).join("") || `<p class="hint">No potions match.</p>`;
+    $("herb-table").innerHTML = G.HERBS.map(([h, lvl]) =>
+      `<span class="herb ${herb >= lvl ? "ok" : ""}"><b>${lvl}</b> ${esc(h)}</span>`).join("");
+  }
+  $("potion-search").addEventListener("input", () => renderPotions());
+  wireList($("potion-list"), "potion", () => {});
+
+  // ================================================================ TREES
+  const TREE_WIKI = { tree: "Tree patch", fruit: "Fruit tree patch", hardwood: "Hardwood tree patch",
+                      calquat: "Calquat tree patch", spirit: "Spirit tree patch", crystal: "Crystal tree patch",
+                      celastrus: "Celastrus patch", redwood: "Redwood tree patch" };
+  function renderTrees() {
+    const a = account, f = state.ui.trees || "all";
+    const farm = a.levels.Farming;
+    const types = G.TREE_TYPES;
+    const counts = { all: types.reduce((n, t) => n + t.patches.length, 0) };
+    for (const t of types) counts[t.id] = t.patches.length;
+    chips($("tree-chips"), [["all", "All"]].concat(types.map((t) => [t.id, t.name.replace(/ patch(es)?$/, "")])), f, counts,
+      (k) => { state.ui.trees = k; save(); renderTrees(); });
+    let usable = 0;
+    const html = types.filter((t) => f === "all" || t.id === f).map((t) => {
+      const best = t.seeds.filter((s) => farm >= s[1]).pop();
+      const seeds = t.seeds.map(([name, lvl, px, cx, grow, pay]) => `
+        <tr class="${farm >= lvl ? "" : "locked"}"><td><b>${esc(name)}</b></td><td>${lvl}</td>
+          <td>${px === null ? "—" : fmt(px) + " / " + fmt(cx)}</td><td>${grow ? esc(grow) : "—"}</td><td>${esc(pay)}</td></tr>`).join("");
+      const patches = t.patches.map((p) => {
+        const [missing, notes] = p.req ? a.check(p.req) : [[], []];
+        const ok = missing.length === 0;
+        if (ok) usable++;
+        const label = !ok ? "Locked" : notes.length ? "Check" : "Ready";
+        const sub = `${statusBadge(label)}<span>${esc(p.where)}</span>` +
+          (!ok ? `<span>· needs ${esc(missing.join(", "))}</span>` : "") +
+          (notes.length ? `<span>· ${esc(notes.join(", "))}</span>` : "");
+        const body = `<dl>
+            <dt>Gardener</dt><dd>${esc(p.gardener)}</dd>
+            <dt>Get there</dt><dd>${esc(p.tele)}</dd>
+            <dt>Requires</dt><dd>${p.req ? reqList(p.req) : "None"}</dd>
+            ${p.note ? `<dt>Note</dt><dd>${esc(p.note)}</dd>` : ""}
+          </dl><a class="wiki" href="${wikiUrl(TREE_WIKI[t.id])}" target="_blank" rel="noopener">Open wiki page ↗</a>`;
+        return itemHtml({ id: t.id + "|" + p.name, kind: "tree", cls: label === "Ready" ? "is-ready" : label === "Check" ? "is-close" : "is-locked", title: p.name, sub, body });
+      }).join("");
+      return `<section class="group">
+          <h2>${esc(t.name)} <span class="muted">· ${t.patches.length} patch${t.patches.length === 1 ? "" : "es"}</span></h2>
+          <p class="hint">${esc(t.blurb)} ${best ? `Best you can plant: <b>${esc(best[0])}</b>.` : `<span class="warn">Needs ${t.seeds[0][1]} Farming to plant anything.</span>`}</p>
+          <div class="table-wrap"><table class="seeds">
+            <thead><tr><th>Seed</th><th>Lvl</th><th>XP plant / check</th><th>Grows</th><th>Protect with</th></tr></thead>
+            <tbody>${seeds}</tbody></table></div>
+          <ul class="list">${patches}</ul>
+        </section>`;
+    }).join("");
+    $("tree-groups").innerHTML = html;
+    $("tree-status").innerHTML = `Your Farming: <b>${farm}</b> · you can reach ${usable} of the patches shown`;
+  }
+  wireList($("tree-groups"), "tree", () => {});
+
+  // ================================================================ SLAYER
+  const MASTER = Object.fromEntries(G.MASTERS.map((m) => [m.id, m]));
+  function taskReq(t) {
+    const r = t.req || {};
+    return { skills: Object.assign({ Slayer: t.slayer }, r.skills || {}), pre: r.pre, started: r.started, combat: t.combat };
+  }
+  function renderSlayer() {
+    const a = account, f = state.ui.slayer || "all";
+    const search = $("slayer-search").value.trim().toLowerCase();
+    const mine = $("slayer-mine").checked;
+    let rows = G.TASKS.map((t) => {
+      const [missing, notes] = a.check(taskReq(t));
+      return { t, ok: missing.length === 0, missing, notes, codes: t.masters.split(" ") };
+    });
+    const counts = { all: rows.length };
+    for (const m of G.MASTERS) counts[m.id] = rows.filter((r) => r.codes.includes(m.id)).length;
+    chips($("slayer-chips"), [["all", "All tasks"]].concat(G.MASTERS.map((m) => [m.id, m.name.split(" / ")[0].replace(" quo Maten", "")])),
+      f, counts, (k) => { state.ui.slayer = k; save(); renderSlayer(); });
+    const m = MASTER[f];
+    $("slayer-master").innerHTML = m ? `<div class="card master"><b>${esc(m.name)}</b> · ${esc(m.where)}<br>
+        <span class="muted">Requirement: ${esc(m.req)}</span></div>` : "";
+    if (m) rows = rows.filter((r) => r.codes.includes(f));
+    if (mine) rows = rows.filter((r) => r.ok);
+    if (search) rows = rows.filter((r) => (r.t.name + " " + r.t.locs.join(" ")).toLowerCase().includes(search));
+    const canDo = G.TASKS.filter((t) => a.check(taskReq(t))[0].length === 0).length;
+    $("slayer-status").innerHTML = `Your Slayer: <b>${a.levels.Slayer}</b> · Combat <b>${a.combat}</b> · ` +
+      `you meet the requirements for ${canDo} of ${G.TASKS.length} tasks`;
+    $("slayer-list").innerHTML = rows.map(({ t, ok, missing, notes, codes }) => {
+      const status = ok ? (notes.length ? "Check" : "Ready") : missing.length <= 1 ? "Close" : "Locked";
+      const cls = status === "Ready" ? "is-ready" : status === "Locked" ? "is-locked" : "is-close";
+      const sub = `${statusBadge(status)}<span>Slayer ${t.slayer}</span>` +
+        (notes.length ? `<span>· ${esc(notes.join(", "))}</span>` : "") +
+        `<span>· ${esc(t.locs[0])}${t.locs.length > 1 ? ` +${t.locs.length - 1} more` : ""}</span>` +
+        (!ok ? `<span>· needs ${esc(missing.slice(0, 2).join(", "))}${missing.length > 2 ? "…" : ""}</span>` : "");
+      const masters = codes.map((c) => MASTER[c].name).join(", ");
+      const body = `<dl>
+          <dt>${t.konar ? "Locations" : "Where"}</dt><dd><ul class="locs">${t.locs.map((l) => `<li>${esc(l)}</li>`).join("")}</ul>
+            ${t.konar ? `<span class="muted">Konar picks one of these for you.</span>` : ""}</dd>
+          <dt>Requires</dt><dd>${reqList(taskReq(t))}</dd>
+          ${t.note ? `<dt>Bring / note</dt><dd>${esc(t.note)}</dd>` : ""}
+          <dt>Assigned by</dt><dd>${esc(masters)}</dd>
+        </dl><a class="wiki" href="${wikiUrl("Slayer task/" + t.name)}" target="_blank" rel="noopener">Open wiki page ↗</a>`;
+      return itemHtml({ id: t.name, kind: "slayer", cls, title: t.name, sub, body });
+    }).join("") || `<p class="hint">No tasks match.</p>`;
+  }
+  $("slayer-search").addEventListener("input", () => renderSlayer());
+  $("slayer-mine").addEventListener("change", (e) => { state.ui.slayerMine = e.target.checked; save(); renderSlayer(); });
+  $("slayer-mine").checked = !!state.ui.slayerMine;
+  wireList($("slayer-list"), "slayer", () => {});
+
   // ================================================================ refresh everything
   let refreshTimer = null;
   function scheduleRefresh() {
@@ -360,6 +502,9 @@
     renderQuests();
     renderDiaries();
     renderPvm();
+    renderSlayer();
+    renderPotions();
+    renderTrees();
   }
 
   // ================================================================ SYNC (hiscores + WikiSync)
@@ -637,6 +782,14 @@
   if (state.autoSync && state.rsn) sync(true);
 
   if ("serviceWorker" in navigator && window.isSecureContext) {
-    navigator.serviceWorker.register("sw.js").catch(() => {});
+    // When an update you pushed to GitHub takes over, reload once so it shows straight away.
+    const hadController = !!navigator.serviceWorker.controller;
+    let reloaded = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (hadController && !reloaded) { reloaded = true; location.reload(); }
+    });
+    navigator.serviceWorker.register("sw.js", { updateViaCache: "none" })
+      .then((reg) => reg.update())
+      .catch(() => {});
   }
 })();

@@ -7,25 +7,29 @@ An installable web app for Old School RuneScape. It works on your phone and your
 - **Quests**: all 184 quests and 19 miniquests. Tick them off, see what's ready, and see exactly what's blocking the rest.
 - **Diaries**: all 48 achievement diary tiers (12 regions × 4 tiers), with what's still missing and what they reward.
 - **PvM**: every boss on the hiscores (71), every Slayer-locked monster (50) and popular training spots, rated Ready, Almost, Locked or Later for your stats.
+- **Slayer**: all 116 Slayer tasks, with where to kill them (including Konar's official location lists), what to bring, which masters assign them, and whether you meet the requirements.
+- **Potions**: every Herblore potion (71) with its recipe, XP and effect, marked by what your Herblore level can make, plus herb cleaning levels.
+- **Trees**: all 28 tree-type farming patches, grouped by patch type (tree, fruit tree, hardwood, calquat, spirit, crystal, celastrus, redwood), with seed levels, XP, growth times, protection payments, and which patches your quests and levels unlock.
 - **Alch**: a live, ranked list of the most profitable items to high alch, refreshed every minute from the OSRS Wiki's real-time prices.
 
 Your levels and ticks are saved in your browser. Nothing is uploaded anywhere.
 
 ## Put it on GitHub Pages (one time, about 2 minutes)
 
-1. On github.com, click **New repository**. Name it something like `osrs-toolkit` and set it to **Public**. GitHub Pages is free for public repos.
+1. On github.com (signed in as **kenneth99213**), click **New repository**. Name it `osrs-toolkit` and set it to **Public**. GitHub Pages is free for public repos.
 2. On the new repo's page, click **uploading an existing file** and drag in **everything inside this folder**, including the `icons` and `proxy` folders. Then click **Commit changes**.
    - Or, from a terminal in this folder:
      ```
-     git remote add origin https://github.com/YOUR-NAME/osrs-toolkit.git
+     git remote add origin https://github.com/kenneth99213/osrs-toolkit.git
      git push -u origin main
      ```
 3. In the repo, go to **Settings → Pages**. Under **Build and deployment**, set **Source** to *Deploy from a branch*, pick the **main** branch and the **/ (root)** folder, and click **Save**.
-4. After a minute your app is live at `https://YOUR-NAME.github.io/osrs-toolkit/`.
+4. After a minute your app is live at **https://kenneth99213.github.io/osrs-toolkit/**.
+   (If you'd rather it live at the bare https://kenneth99213.github.io/, name the repo `kenneth99213.github.io` instead.)
 
 ## Install it as an app
 
-- **Android (Chrome):** open the link, then tap **⋮ → Add to Home screen → Install**.
+- **Android (Chrome):** open https://kenneth99213.github.io/osrs-toolkit/, then tap **⋮ → Add to Home screen → Install**.
 - **iPhone (Safari):** open the link, then tap **Share → Add to Home Screen**.
 - **PC (Chrome or Edge):** click the install icon at the right end of the address bar.
 
@@ -42,10 +46,20 @@ The **Sync** button tries to pull your levels and kill counts from the official 
 
 Browsers block websites from reading another site's data unless that site allows it, and the OSRS hiscores don't allow it. So the Sync button will most likely say *blocked by the browser*. Typing your levels works fine without it. To enable live sync, set up the small free proxy in `proxy/worker.js`:
 
-1. Sign up at [dash.cloudflare.com](https://dash.cloudflare.com) (free).
-2. Go to **Workers & Pages → Create → Create Worker**, name it (for example `osrs-proxy`), and click **Deploy**.
-3. Click **Edit code**, replace everything with the contents of `proxy/worker.js`, put your name in `USER_AGENT`, and click **Deploy**.
-4. Copy the worker's URL (`https://osrs-proxy.<you>.workers.dev`) into the app under **Skills → Sync & backup settings → Live-data proxy URL**, then press **Sync**.
+Your worker is already running at **https://osrs-proxy.kennethmiser.workers.dev**. To finish it:
+
+1. In Cloudflare, open **Workers & Pages → osrs-proxy → Edit code**.
+2. Replace everything with the contents of `proxy/worker.js` from this repo. It's already set up for you:
+   ```js
+   const ALLOWED_ORIGIN = "https://kenneth99213.github.io";
+   ```
+   That's the bare site address: no `/osrs-toolkit` on the end and no trailing slash.
+3. Click **Deploy**.
+4. Open the app **from https://kenneth99213.github.io/osrs-toolkit/** (the worker refuses every other website, including a copy opened from your PC). Then go to **Skills → Sync & backup settings**, paste `https://osrs-proxy.kennethmiser.workers.dev` into **Live-data proxy URL**, type `kennypitzi`, and press **Sync**.
+
+To test the app from anywhere else, temporarily set `ALLOWED_ORIGIN` to `"*"` and redeploy.
+
+Setting one up from scratch (for a friend, say): sign up free at [dash.cloudflare.com](https://dash.cloudflare.com), go to **Workers & Pages → Create → Create Worker**, name it, deploy, then do the steps above with your own site address.
 
 The worker only forwards requests to the hiscores and WikiSync, so nobody can use it as a general proxy. The free tier allows 100,000 requests a day.
 
@@ -59,7 +73,8 @@ Edit the files and push them to GitHub. Installed copies pick up the new version
 | --- | --- |
 | `index.html`, `style.css`, `app.js` | The app itself |
 | `logic.js` | The advice engine (a direct port of the desktop app's `Account` class) |
-| `data.js` | All game data |
+| `data.js` | Quest, diary, PvM and training data |
+| `guides-data.js` | Potion, tree patch and Slayer task data |
 | `sw.js`, `manifest.webmanifest`, `icons/` | What makes it installable and work offline |
 | `proxy/worker.js` | Optional live-sync proxy (Cloudflare Worker) |
 
